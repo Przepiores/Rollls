@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,60 +34,7 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const CheckerBand(),
           const RainbowStripe(),
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-            decoration: BoxDecoration(
-              gradient: heroGradient,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: neonGlow(neonPink, blur: 24),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Positioned(right: -6, top: -10, child: Swirl(color: RollColors.yellow, size: 54)),
-                const Positioned(right: -4, bottom: -12, child: Swirl(color: RollColors.lime, size: 34)),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 68,
-                          height: 68,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: neonGlow(Colors.white, blur: 12),
-                          ),
-                          child: Image.asset('assets/images/logo.png', semanticLabel: 'Ice Rolls'),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l.greeting(session != null ? ', ${session.name}' : ''),
-                                style: text.headlineMedium?.copyWith(color: Colors.white),
-                              ),
-                              Text(
-                                l.tagline,
-                                style: text.bodyMedium?.copyWith(color: Colors.white, fontStyle: FontStyle.italic),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const OpenStatusPill(),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _GlassHero(greeting: l.greeting(session != null ? ', ${session.name}' : ''), tagline: l.tagline),
           SectionTitle(l.promotions, color: RollColors.lime),
           SizedBox(
             height: 136,
@@ -162,6 +111,123 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+/// Nagłówek jak tafla szkła: rozmyte kolorowe rolki pod półprzezroczystą kartą.
+class _GlassHero extends StatelessWidget {
+  const _GlassHero({required this.greeting, required this.tagline});
+  final String greeting;
+  final String tagline;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final text = Theme.of(context).textTheme;
+    final fg = dark ? Colors.white : ink;
+
+    Widget blob(Color c, double size) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [c, c.withValues(alpha: 0)]),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Stack(
+        children: [
+          // Kolorowe tło, które prześwituje przez szkło.
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: dark
+                              ? const [Color(0xFF4A1F66), Color(0xFF2B1A45)]
+                              : const [Color(0xFFFFD6EA), Color(0xFFE6D6FF)],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(left: -30, top: -40, child: blob(neonPink, 170)),
+                  Positioned(right: -20, top: -30, child: blob(RollColors.yellow, 140)),
+                  Positioned(right: 60, bottom: -60, child: blob(RollColors.sky, 160)),
+                  Positioned(left: 90, bottom: -50, child: blob(RollColors.lime, 120)),
+                  const Positioned(right: 12, top: 10, child: Swirl(color: RollColors.purple, size: 56)),
+                  const Positioned(left: 150, bottom: 4, child: Swirl(color: RollColors.pink, size: 40)),
+                ],
+              ),
+            ),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: dark ? 0.16 : 0.38),
+                      Colors.white.withValues(alpha: dark ? 0.04 : 0.12),
+                    ],
+                  ),
+                  border: Border.all(color: Colors.white.withValues(alpha: dark ? 0.3 : 0.8), width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 68,
+                          height: 68,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: neonGlow(Colors.white, blur: 12),
+                          ),
+                          child: Image.asset('assets/images/logo.png', semanticLabel: 'Ice Rolls'),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(greeting, style: text.headlineMedium?.copyWith(color: fg)),
+                              Text(
+                                tagline,
+                                style: text.bodyMedium?.copyWith(color: fg, fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const OpenStatusPill(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class OpenStatusPill extends StatelessWidget {
   const OpenStatusPill({super.key});
 
@@ -184,24 +250,20 @@ class OpenStatusPill extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(99),
-          border: Border.all(color: ink, width: 1.5),
-        ),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(99)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 9,
-              height: 9,
-              decoration: const BoxDecoration(color: ink, shape: BoxShape.circle),
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle, boxShadow: neonGlow(color, blur: 6)),
             ),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: const TextStyle(fontWeight: FontWeight.w800, color: ink),
+                style: const TextStyle(fontWeight: FontWeight.w700, color: ink),
               ),
             ),
           ],
