@@ -13,29 +13,41 @@ class StampCardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Tęczowa ramka z pastelowym wnętrzem.
     return Container(
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: scheme.onSurface, width: 2),
+        gradient: rainbow,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: neonGlow(RollColors.pink, blur: 16),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          const CheckerBand(height: 12, cell: 12),
-          Padding(
-            padding: EdgeInsets.all(compact ? 14 : 18),
-            child: GridView.count(
-              crossAxisCount: 5,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: compact ? 8 : 12,
-              crossAxisSpacing: compact ? 8 : 12,
-              children: [for (var i = 0; i < StampCard.goal; i++) _Slot(index: i, filled: i < card.stamps)],
-            ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(23),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark ? const [nightCard, Color(0xFF3A1E4F)] : const [paper, Color(0xFFFFE3F1)],
           ),
-        ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            const CheckerBand(height: 12, cell: 12),
+            Padding(
+              padding: EdgeInsets.all(compact ? 14 : 18),
+              child: GridView.count(
+                crossAxisCount: 5,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: compact ? 8 : 12,
+                crossAxisSpacing: compact ? 8 : 12,
+                children: [for (var i = 0; i < StampCard.goal; i++) _Slot(index: i, filled: i < card.stamps)],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -57,9 +69,13 @@ class _Slot extends StatelessWidget {
         duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: filled ? scheme.surface : Colors.transparent,
+          color: filled
+              ? scheme.surface
+              : isReward
+              ? RollColors.yellow.withValues(alpha: 0.35)
+              : color.withValues(alpha: 0.1),
           border: Border.all(
-            color: filled ? color : scheme.onSurface.withValues(alpha: 0.25),
+            color: filled ? color : color.withValues(alpha: 0.55),
             width: 2,
             strokeAlign: BorderSide.strokeAlignInside,
           ),
@@ -73,7 +89,7 @@ class _Slot extends StatelessWidget {
                   builder: (_, v, _) => Swirl(color: color, size: 30, progress: v),
                 )
               : isReward
-              ? Icon(Icons.icecream_outlined, color: scheme.onSurface.withValues(alpha: 0.45))
+              ? Icon(Icons.icecream, color: scheme.onSurface.withValues(alpha: 0.7))
               : null,
         ),
       ),

@@ -52,19 +52,46 @@ class ProductImage extends StatelessWidget {
   }
 }
 
+/// Tęczowy pasek w kolorach sześciu rolek z logo.
+class RainbowStripe extends StatelessWidget {
+  const RainbowStripe({super.key, this.height = 6});
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: height,
+    decoration: const BoxDecoration(gradient: rainbow),
+  );
+}
+
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key, this.trailing});
+  const SectionTitle(this.text, {super.key, this.trailing, this.color = RollColors.pink});
   final String text;
   final Widget? trailing;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 24, 12, 10),
     child: Row(
       children: [
+        Swirl(color: color, size: 22),
+        const SizedBox(width: 8),
         Expanded(child: Text(text, style: Theme.of(context).textTheme.titleLarge)),
         ?trailing,
       ],
     ),
   );
 }
+
+/// Pasek tytułu z kolorową spiralką i tęczowym paskiem pod spodem.
+PreferredSizeWidget brandAppBar(BuildContext context, String title, {Color color = RollColors.pink}) => AppBar(
+  title: Row(
+    children: [
+      Swirl(color: color, size: 26),
+      const SizedBox(width: 10),
+      Flexible(child: Text(title)),
+    ],
+  ),
+  bottom: const PreferredSize(preferredSize: Size.fromHeight(4), child: RainbowStripe(height: 4)),
+);

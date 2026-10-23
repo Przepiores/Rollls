@@ -27,14 +27,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final items = menuItems.where((i) => i.categoryId == _category).toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.tabMenu)),
+      appBar: brandAppBar(context, l.tabMenu, color: cat.color),
       body: Column(
         children: [
           SizedBox(
-            height: 52,
+            height: 60,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               itemCount: categories.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
@@ -45,6 +45,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   selected: selected,
                   showCheckmark: false,
                   selectedColor: c.color,
+                  backgroundColor: tint(context, c.color, light: 0.3, dark: 0.3),
                   labelStyle: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: selected ? ink : Theme.of(context).colorScheme.onSurface,
@@ -104,6 +105,11 @@ class _MenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Card(
+      color: tint(context, color),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color, width: 2),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

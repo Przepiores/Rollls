@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../widgets/common.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/stamp_card.dart';
@@ -38,7 +39,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.shopPanel)),
+      appBar: brandAppBar(context, l.shopPanel, color: RollColors.lime),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -102,8 +103,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               ),
           ],
           const SizedBox(height: 28),
-          for (final (icon, label) in tools)
+          for (final (i, (icon, label)) in tools.indexed)
             Card(
+              color: tint(context, RollColors.all[i % RollColors.all.length], light: 0.3),
               margin: const EdgeInsets.only(bottom: 10),
               child: ListTile(
                 leading: Icon(icon),

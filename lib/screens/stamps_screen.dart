@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/common.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/stamp_card.dart';
@@ -16,7 +17,7 @@ class StampsScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final session = ref.watch(sessionProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l.tabStamps)),
+      appBar: brandAppBar(context, l.tabStamps, color: RollColors.yellow),
       body: session == null ? const _SignIn() : const _Card(),
     );
   }
@@ -37,7 +38,7 @@ class _Card extends ConsumerWidget {
         const SizedBox(height: 14),
         Text(
           card.rewardReady ? l.rewardReady : l.stampsToReward(card.remaining),
-          style: text.titleLarge,
+          style: text.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary),
           textAlign: TextAlign.center,
         ),
         Text(l.stampsProgress(card.stamps, 10), textAlign: TextAlign.center, style: text.bodyMedium),
@@ -48,7 +49,8 @@ class _Card extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: card.rewardReady ? RollColors.lime : ink, width: 3),
+              border: Border.all(color: card.rewardReady ? RollColors.lime : RollColors.purple, width: 3),
+              boxShadow: neonGlow(card.rewardReady ? RollColors.lime : neonPink),
             ),
             // W wersji z Firebase kod zawiera krótkotrwały token, a nie samo id klienta.
             child: QrImageView(data: 'icerolls:demo-customer', size: 190, backgroundColor: Colors.white),
