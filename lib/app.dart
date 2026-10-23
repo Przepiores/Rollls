@@ -1,0 +1,75 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'l10n/app_localizations.dart';
+import 'screens/admin_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/menu_screen.dart';
+import 'screens/more_screen.dart';
+import 'screens/shell.dart';
+import 'screens/stamps_screen.dart';
+import 'state.dart';
+import 'theme.dart';
+
+GoRouter _buildRouter() => GoRouter(
+  initialLocation: '/',
+  routes: [
+    StatefulShellRoute.indexedStack(
+      builder: (_, _, shell) => AppShell(shell: shell),
+      branches: [
+        StatefulShellBranch(
+          routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())],
+        ),
+        StatefulShellBranch(
+          routes: [GoRoute(path: '/menu', builder: (_, _) => const MenuScreen())],
+        ),
+        StatefulShellBranch(
+          routes: [GoRoute(path: '/stamps', builder: (_, _) => const StampsScreen())],
+        ),
+        StatefulShellBranch(
+          routes: [GoRoute(path: '/more', builder: (_, _) => const MoreScreen())],
+        ),
+      ],
+    ),
+    GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
+  ],
+);
+
+class IceRollsApp extends ConsumerStatefulWidget {
+  const IceRollsApp({super.key});
+
+  @override
+  ConsumerState<IceRollsApp> createState() => _IceRollsAppState();
+}
+
+class _IceRollsAppState extends ConsumerState<IceRollsApp> {
+  final _router = _buildRouter();
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      title: 'Ice Rolls',
+      debugShowCheckedModeBanner: false,
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode: ref.watch(themeModeProvider),
+      locale: ref.watch(localeProvider),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      routerConfig: _router,
+    );
+  }
+}
