@@ -14,6 +14,7 @@ import '../widgets/checker.dart';
 import '../widgets/common.dart';
 import '../widgets/stamp_card.dart';
 import '../widgets/swirl.dart';
+import '../widgets/wings.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -160,7 +161,7 @@ class _GlassHero extends StatelessWidget {
                   Positioned(right: 60, bottom: -60, child: blob(RollColors.sky, 160)),
                   Positioned(left: 90, bottom: -50, child: blob(RollColors.lime, 120)),
                   const Positioned(right: 12, top: 10, child: Swirl(color: RollColors.purple, size: 56)),
-                  const Positioned(left: 150, bottom: 4, child: Swirl(color: RollColors.pink, size: 40)),
+                  const Positioned(left: 12, bottom: 10, child: Swirl(color: RollColors.pink, size: 40)),
                 ],
               ),
             ),
@@ -185,38 +186,33 @@ class _GlassHero extends StatelessWidget {
                   border: Border.all(color: Colors.white.withValues(alpha: dark ? 0.3 : 0.8), width: 1.5),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 68,
-                          height: 68,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: neonGlow(Colors.white, blur: 12),
-                          ),
-                          child: Image.asset('assets/images/logo.png', semanticLabel: 'Ice Rolls'),
+                    RainbowWings(
+                      child: Container(
+                        width: 76,
+                        height: 76,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: neonGlow(Colors.white, blur: 12),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(greeting, style: text.headlineMedium?.copyWith(color: fg)),
-                              Text(
-                                tagline,
-                                style: text.bodyMedium?.copyWith(color: fg, fontStyle: FontStyle.italic),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        child: ClipOval(child: Image.asset('assets/images/logo.png', semanticLabel: 'Ice Rolls')),
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    const OpenStatusPill(),
+                    const SizedBox(height: 6),
+                    Text(
+                      greeting,
+                      textAlign: TextAlign.center,
+                      style: text.headlineMedium?.copyWith(color: fg),
+                    ),
+                    Text(
+                      tagline,
+                      textAlign: TextAlign.center,
+                      style: text.bodyMedium?.copyWith(color: fg, fontStyle: FontStyle.italic),
+                    ),
+                    const SizedBox(height: 12),
+                    const OpenStatusPill(alignment: Alignment.center),
                   ],
                 ),
               ),
@@ -229,7 +225,8 @@ class _GlassHero extends StatelessWidget {
 }
 
 class OpenStatusPill extends StatelessWidget {
-  const OpenStatusPill({super.key});
+  const OpenStatusPill({super.key, this.alignment = Alignment.centerLeft});
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +244,7 @@ class OpenStatusPill extends StatelessWidget {
       ),
     };
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: alignment,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(99)),

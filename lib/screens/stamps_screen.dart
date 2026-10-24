@@ -8,6 +8,7 @@ import '../widgets/common.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/stamp_card.dart';
+import '../widgets/wings.dart';
 
 class StampsScreen extends ConsumerWidget {
   const StampsScreen({super.key});
@@ -36,6 +37,24 @@ class _Card extends ConsumerWidget {
       children: [
         StampCardView(card: card),
         const SizedBox(height: 14),
+        if (card.rewardReady)
+          Center(
+            child: RainbowWings(
+              width: 260,
+              height: 110,
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: RollColors.yellow,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ink, width: 2),
+                  boxShadow: neonGlow(RollColors.yellow),
+                ),
+                child: const Icon(Icons.icecream, color: ink, size: 34),
+              ),
+            ),
+          ),
         Text(
           card.rewardReady ? l.rewardReady : l.stampsToReward(card.remaining),
           style: text.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary),

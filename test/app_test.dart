@@ -10,7 +10,10 @@ void main() {
   Future<void> phone(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
+    // Skrzydła trzepoczą bez końca, więc w testach wyłączamy animacje jak w ustawieniach dostępności.
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     await tester.pumpWidget(const ProviderScope(child: IceRollsApp()));
     await tester.pumpAndSettle();
   }
