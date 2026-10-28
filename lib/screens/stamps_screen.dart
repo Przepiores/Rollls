@@ -41,17 +41,17 @@ class _Card extends ConsumerWidget {
           Center(
             child: RainbowWings(
               width: 260,
-              height: 110,
+              height: 150,
               child: Container(
-                width: 64,
-                height: 64,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
                   color: RollColors.yellow,
                   shape: BoxShape.circle,
                   border: Border.all(color: ink, width: 2),
                   boxShadow: neonGlow(RollColors.yellow),
                 ),
-                child: const Icon(Icons.icecream, color: ink, size: 34),
+                child: const Icon(Icons.icecream, color: ink, size: 30),
               ),
             ),
           ),

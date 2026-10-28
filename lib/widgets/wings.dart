@@ -73,37 +73,76 @@ class WingsPainter extends CustomPainter {
     Color(0xFFF2557A),
   ];
 
-  static const _feathersPerRow = 12;
+  static const _feathersPerRow = 15;
 
-  // Wachlarz piór: od prawie pionowo w górę do skosu w dół (radiany, 0 = poziomo na zewnątrz).
-  static const _fanTop = -1.2;
-  static const _fanBottom = 1.0;
+  // Wachlarz piór: od prawie pionowo w górę do pionowo w dół (radiany, 0 = poziomo na zewnątrz).
+  static const _fanTop = -1.42;
+  static const _fanBottom = 1.5;
+
+  // Oba skrzydła razem tworzą serce: szerokie u góry, zwężone w szpic na dole.
+  // Krzywa serca x = 16 sin³t, y = -(13 cos t - 5 cos 2t - 2 cos 3t - cos 4t), środek w (0, 0):
+  // wcięcie u góry na y = -5, czubki łuków na y ≈ -12, szpic na y = 17.
+  static const _heartHalfWidth = 16.0;
+  static const _heartTop = 12.0;
+  static const _heartBottom = 17.0;
+
+  /// Odległość od środka do krawędzi prawej połówki serca, próbkowana co kąt (od -π/2 do π/2).
+  static final List<double> _heartRadius = _buildHeartRadius();
+
+  static List<double> _buildHeartRadius() {
+    const samples = 181;
+    final radius = List<double>.filled(samples, 0);
+    for (var i = 0; i <= 2000; i++) {
+      final t = math.pi * i / 2000;
+      final x = 16 * math.pow(math.sin(t), 3);
+      final y = -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t));
+      final angle = math.atan2(y, x);
+      final k = ((angle + math.pi / 2) / math.pi * (samples - 1)).round().clamp(0, samples - 1);
+      radius[k] = math.max(radius[k], math.sqrt(x * x + y * y));
+    }
+    // Uzupełnij kąty, w które nie trafiła żadna próbka.
+    for (var k = 1; k < samples; k++) {
+      if (radius[k] == 0) radius[k] = radius[k - 1];
+    }
+    return radius;
+  }
+
+  /// Krawędź serca w kierunku [dir], w jednostkach krzywej, rozciągnięta o skale [sx], [sy].
+  static double _heartEdge(Offset dir, double sx, double sy) {
+    // Kąt na niezniekształconej krzywej, w którym leży ten kierunek po rozciągnięciu.
+    final angle = math.atan2(dir.dy / sy, dir.dx / sx);
+    final k = ((angle + math.pi / 2) / math.pi * (_heartRadius.length - 1)).clamp(0.0, _heartRadius.length - 1.0);
+    final lo = k.floor();
+    final hi = math.min(lo + 1, _heartRadius.length - 1);
+    final r = _heartRadius[lo] + (_heartRadius[hi] - _heartRadius[lo]) * (k - lo);
+    return r * math.sqrt(math.pow(math.cos(angle) * sx, 2) + math.pow(math.sin(angle) * sy, 2));
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final origin = size.center(Offset.zero);
-    // Końce piór leżą na elipsie wpisanej w pole widżetu, więc nic nie jest ucięte.
-    final rx = size.width / 2 * 0.98;
-    final ry = size.height / 2 * 0.98;
-    final tilt = (flap - 0.5) * 0.12;
+    // Serce wpisane w pole widżetu, więc nic nie jest ucięte; najwyżej lekko poszerzone.
+    final sy = size.height * 0.97 / (_heartTop + _heartBottom);
+    // Środek krzywej jest trochę poniżej środka pola, bo szpic na dole sięga dalej niż łuki u góry.
+    final origin = size.center(Offset(0, -(_heartBottom - _heartTop) / 2 * sy));
+    final sx = math.min(size.width / 2 * 0.97 / _heartHalfWidth, sy * 1.5);
+    final tilt = (flap - 0.5) * 0.1;
     for (final side in [-1.0, 1.0]) {
       canvas.save();
       canvas.translate(origin.dx, origin.dy);
       canvas.scale(side, 1);
       canvas.rotate(-tilt);
-      _wing(canvas, rx, ry);
+      _wing(canvas, sx, sy);
       canvas.restore();
     }
   }
 
-  void _wing(Canvas canvas, double rx, double ry) {
+  void _wing(Canvas canvas, double sx, double sy) {
     final light = Paint()..style = PaintingStyle.fill;
     final shade = Paint()..style = PaintingStyle.fill;
     final spine = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.6
       ..color = Colors.white.withValues(alpha: 0.35);
-    final rootLen = rx * 0.1;
     for (var row = 0; row < _rows.length; row++) {
       final color = _rows[row];
       final next = _rows[math.min(row + 1, _rows.length - 1)];
@@ -119,14 +158,15 @@ class WingsPainter extends CustomPainter {
         if (p <= 0) continue;
         final target = _fanTop + (_fanBottom - _fanTop) * t;
         // Złożone pióra leżą płasko lekko w górę, rozkładają się do wachlarza.
-        final angle = -0.2 + (target + 0.2) * p;
+        // Sprężyste dobicie nie może przerzucić dolnych piór za szpic serca.
+        final angle = math.min(-0.2 + (target + 0.2) * p, _fanBottom);
         final dir = Offset(math.cos(angle), math.sin(angle));
         final normal = Offset(-dir.dy, dir.dx);
-        final edge = 1 / math.sqrt(math.pow(dir.dx / rx, 2) + math.pow(dir.dy / ry, 2));
+        // Długość z docelowego kierunku, żeby obracające się pióro nie wystawało poza serce.
+        final edge = _heartEdge(Offset(math.cos(target), math.sin(target)), sx, sy);
+        final rootLen = edge * 0.3;
         final base = dir * rootLen;
-        // Najdłuższe pióra idą skosem w górę, dolne są krótsze, jak w prawdziwym skrzydle.
-        final shape = 1 - 0.4 * math.pow((target + 0.55) / 1.55, 2);
-        final len = (edge * shape - rootLen) * reach * (0.2 + 0.8 * p);
+        final len = (edge - rootLen) * reach * (0.2 + 0.8 * p);
         if (len <= 0) continue;
         final tip = dir * (rootLen + len);
         final w = math.max(len * 0.13, 2.5);

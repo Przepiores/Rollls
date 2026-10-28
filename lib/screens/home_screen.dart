@@ -189,9 +189,10 @@ class _GlassHero extends StatelessWidget {
                 child: Column(
                   children: [
                     RainbowWings(
+                      height: 190,
                       child: Container(
-                        width: 76,
-                        height: 76,
+                        width: 64,
+                        height: 64,
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: Colors.white,
