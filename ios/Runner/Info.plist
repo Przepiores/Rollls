@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Aparat skanuje kod QR z paragonu albo z lady, żeby dodać pieczątki na karcie Ice Rolls.</string>
 </dict>
 </plist>

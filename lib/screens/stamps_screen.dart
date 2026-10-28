@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../data/models.dart';
@@ -56,6 +57,17 @@ class _Card extends ConsumerWidget {
           textAlign: TextAlign.center,
         ),
         Text(l.stampsProgress(card.stamps, 10), textAlign: TextAlign.center, style: text.bodyMedium),
+        const SizedBox(height: 18),
+        FilledButton.icon(
+          onPressed: () => context.push('/scan'),
+          icon: const Icon(Icons.qr_code_scanner),
+          label: Text(l.scanStampCode),
+        ),
+        if (ref.watch(scansLeftTodayProvider).value case final left?)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(l.scansLeftToday(left), textAlign: TextAlign.center, style: text.bodySmall),
+          ),
         const SizedBox(height: 22),
         Center(
           child: Container(
