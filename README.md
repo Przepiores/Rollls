@@ -10,7 +10,7 @@ Aplikacja mobilna **Ice Rolls** (lody tajskie rolowane i gofry, Kuźnicza 10, Wr
 - **Więcej:** adres z nawigacją, godziny otwarcia, Instagram i Facebook, język PL/EN, motyw jasny/ciemny, zgoda marketingowa.
 - **Panel sklepu** (po zalogowaniu): nabijanie pieczątek i wydawanie nagrody. Edycja menu, promocji, push, godzin i statystyki są na razie tylko podglądem.
 
-Prototyp działa na przykładowych danych w pamięci. Menu, ceny i promocje są przykładowe. Logowanie jest symulowane, każde konto ma dostęp do panelu sklepu. Kolejny etap to podłączenie Firebase (Auth, Firestore, Cloud Functions, Cloud Messaging).
+Prototyp działa na danych w pamięci. Menu, ceny i promocje są prawdziwe (lib/data/menu_data.dart, lib/data/shop_data.dart). Logowanie jest symulowane, każde konto ma dostęp do panelu sklepu. Kolejny etap to podłączenie Firebase (Auth, Firestore, Cloud Functions, Cloud Messaging).
 
 ## Uruchomienie
 
@@ -30,7 +30,7 @@ lib/
   app.dart              router i motyw
   theme.dart            kolory marki (6 rolek z logo), czcionki Fredoka i Nunito
   state.dart            stan: język, motyw, sesja, karta pieczątek
-  data/                 modele, przykładowe dane, logika godzin otwarcia
+  data/                 modele, menu, dane sklepu, logika godzin otwarcia
   screens/              ekrany: start, menu, pieczątki, więcej, panel sklepu
   widgets/              szachownica, spiralka-pieczątka, karta pieczątek
   l10n/                 tłumaczenia PL i EN (pliki .arb)
