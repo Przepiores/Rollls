@@ -12,6 +12,7 @@ import 'screens/shell.dart';
 import 'screens/stamps_screen.dart';
 import 'state.dart';
 import 'theme.dart';
+import 'widgets/intro_splash.dart';
 
 GoRouter _buildRouter() => GoRouter(
   initialLocation: '/',
@@ -46,6 +47,7 @@ class IceRollsApp extends ConsumerStatefulWidget {
 
 class _IceRollsAppState extends ConsumerState<IceRollsApp> {
   final _router = _buildRouter();
+  var _introDone = false;
 
   @override
   void dispose() {
@@ -70,6 +72,12 @@ class _IceRollsAppState extends ConsumerState<IceRollsApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: _router,
+      builder: (context, child) => Stack(
+        children: [
+          ?child,
+          if (!_introDone) Positioned.fill(child: IntroSplash(onDone: () => setState(() => _introDone = true))),
+        ],
+      ),
     );
   }
 }

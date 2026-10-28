@@ -53,10 +53,13 @@ class _RainbowWingsState extends State<RainbowWings> with SingleTickerProviderSt
 }
 
 class WingsPainter extends CustomPainter {
-  WingsPainter({this.flap = 0.5});
+  WingsPainter({this.flap = 0.5, this.open = 1});
 
   /// 0–1, pozycja trzepotu.
   final double flap;
+
+  /// 0–1, rozłożenie skrzydeł: 0 to pióra schowane za środkiem, 1 to pełne skrzydła.
+  final double open;
 
   // Od zewnątrz do środka, jak pióra na ścianie lokalu.
   static const _layers = [
@@ -93,12 +96,16 @@ class WingsPainter extends CustomPainter {
       final paint = Paint()..style = PaintingStyle.fill;
       for (var f = 0; f < feathers; f++) {
         final t = (f + stagger) / (feathers - 0.5);
+        // Wewnętrzne warstwy i dolne pióra wysuwają się chwilę później.
+        final delay = (_layers.length - 1 - layer) * 0.06 + t * 0.12;
+        final p = Curves.easeOutBack.transform(((open - delay) / (1 - 0.42)).clamp(0.0, 1.0));
+        if (p <= 0) continue;
         // Pióra rozkładają się od skosu w górę do lekkiego opadu.
-        final angle = -0.8 + t * 1.5;
+        final angle = 0.25 + (-0.8 + t * 1.5 - 0.25) * p;
         final dir = Offset(math.cos(angle), math.sin(angle));
         final normal = Offset(-dir.dy, dir.dx);
         final base = dir * (maxLen * 0.14);
-        final featherLen = len * (1 - (t - 0.35).abs() * 0.35);
+        final featherLen = len * (1 - (t - 0.35).abs() * 0.35) * (0.15 + 0.85 * p);
         final tip = dir * featherLen;
         final mid = Offset.lerp(base, tip, 0.62)!;
         final w = featherLen * 0.19;
@@ -115,5 +122,5 @@ class WingsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(WingsPainter old) => old.flap != flap;
+  bool shouldRepaint(WingsPainter old) => old.flap != flap || old.open != open;
 }
