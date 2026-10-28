@@ -111,7 +111,8 @@ class _CategoryBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 190,
+      // Prawie kwadratowy kadr, żeby zdjęcie było dobrze widać.
+      height: (MediaQuery.sizeOf(context).width * 0.8).clamp(200.0, 420.0),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),

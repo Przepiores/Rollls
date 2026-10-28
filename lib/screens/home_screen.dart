@@ -39,7 +39,7 @@ class HomeScreen extends ConsumerWidget {
           _GlassHero(greeting: l.greeting(session != null ? ', ${session.name}' : ''), tagline: l.tagline),
           SectionTitle(l.promotions, color: RollColors.lime),
           SizedBox(
-            height: 190,
+            height: 280,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -281,7 +281,7 @@ class _PromoCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final fg = promo.image == null ? ink : Colors.white;
     return Container(
-      width: 260,
+      width: 300,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
