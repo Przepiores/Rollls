@@ -33,6 +33,7 @@ const promotions = [
       'Cherries in jelly, pistachio with strawberries and apple with cinnamon on a Belgian waffle. 28 zł.',
     ),
     color: RollColors.yellow,
+    image: 'assets/images/gofr_wisniowy.jpg',
   ),
   Promotion(
     id: 'p-students',
@@ -42,6 +43,7 @@ const promotions = [
       'Ice cream rolls with 2 ingredients for 21 zł, with 3 ingredients for 23 zł.',
     ),
     color: RollColors.lime,
+    image: 'assets/images/lody_tajskie.jpg',
   ),
   Promotion(
     id: 'p-choco',
@@ -51,5 +53,6 @@ const promotions = [
       'Three small hot chocolates to taste. Ask for it at your table.',
     ),
     color: RollColors.pink,
+    image: 'assets/images/gofry_belgijskie_kawa.jpg',
   ),
 ];

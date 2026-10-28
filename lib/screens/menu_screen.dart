@@ -46,9 +46,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   showCheckmark: false,
                   selectedColor: c.color,
                   backgroundColor: tint(context, c.color, light: 0.3, dark: 0.3),
-                  labelStyle: Theme.of(context).chipTheme.labelStyle?.copyWith(
-                    color: selected ? ink : Theme.of(context).colorScheme.onSurface,
-                  ),
+                  labelStyle: Theme.of(context).chipTheme.labelStyle
+                      ?.copyWith(color: selected ? ink : Theme.of(context).colorScheme.onSurface),
                   side: BorderSide(color: c.color, width: 2),
                   onSelected: (_) => setState(() {
                     _category = c.id;
@@ -62,6 +61,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
+                if (cat.image != null) _CategoryBanner(category: cat, locale: locale),
                 if (cat.note != null) _CategoryNote(text: cat.note!.of(locale), color: cat.color),
                 for (final entry in _grouped(items))
                   if (entry.$1 == null)
@@ -101,6 +101,51 @@ List<(LocalizedText?, List<MenuItem>)> _grouped(List<MenuItem> items) {
     }
   }
   return out;
+}
+
+class _CategoryBanner extends StatelessWidget {
+  const _CategoryBanner({required this.category, required this.locale});
+  final MenuCategory category;
+  final Locale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 190,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: category.color, width: 3),
+        boxShadow: neonGlow(category.color),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(category.image!, fit: BoxFit.cover, alignment: category.imageAlignment),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0xB31C1030)],
+                stops: [0.45, 1],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 12,
+            child: Text(
+              category.name.of(locale),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CategoryNote extends StatelessWidget {
@@ -217,11 +262,6 @@ class _MenuTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SizedBox.square(
-                      dimension: 76,
-                      child: ProductImage(item: item, color: color, radius: 14),
-                    ),
-                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,13 +284,7 @@ class _MenuTile extends StatelessWidget {
                   ],
                 ),
                 if (expanded) ...[
-                  const SizedBox(height: 12),
-                  if (item.image != null)
-                    AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: ProductImage(item: item, color: color),
-                    ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   if (item.description != null) Text(item.description!.of(locale), style: text.bodyMedium),
                   for (final line in item.priceDetails(locale))
                     Padding(

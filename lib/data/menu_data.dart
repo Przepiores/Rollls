@@ -1,3 +1,5 @@
+import 'package:flutter/painting.dart';
+
 import '../theme.dart';
 import 'models.dart';
 
@@ -9,6 +11,7 @@ typedef L = LocalizedText;
 const categories = [
   MenuCategory(
     id: 'rolls',
+    image: 'assets/images/lody_tajskie.jpg',
     name: L('Lody tajskie', 'Ice cream rolls'),
     color: RollColors.pink,
     note: L(
@@ -24,12 +27,15 @@ const categories = [
   ),
   MenuCategory(
     id: 'freak',
+    image: 'assets/images/gofr_babelkowy.jpg',
     name: L('Freak Shake', 'Freak Shake'),
     color: RollColors.purple,
     note: L('Każdy Freak Shake 29,90 zł.', 'Every Freak Shake is 29.90 zł.'),
   ),
   MenuCategory(
     id: 'classic',
+    image: 'assets/images/gofry_belgijskie_kawa.jpg',
+    imageAlignment: Alignment(0.6, -0.15),
     name: L('Classic Shake', 'Classic Shake'),
     color: RollColors.sky,
     note: L(
@@ -39,6 +45,8 @@ const categories = [
   ),
   MenuCategory(
     id: 'bubble',
+    image: 'assets/images/gofry_babelkowe.jpg',
+    imageAlignment: Alignment(0, -0.45),
     name: L('Gofry bąbelkowe', 'Bubble waffles'),
     color: RollColors.yellow,
     note: L(
@@ -48,24 +56,31 @@ const categories = [
   ),
   MenuCategory(
     id: 'belgian',
+    image: 'assets/images/gofry_belgijskie_kawa.jpg',
+    imageAlignment: Alignment(0, 0.55),
     name: L('Gofry belgijskie', 'Belgian waffles'),
     color: RollColors.lime,
     note: L('Każdy gofr belgijski 28 zł.', 'Every Belgian waffle is 28 zł.'),
   ),
   MenuCategory(
     id: 'autumn',
+    image: 'assets/images/gofr_wisniowy.jpg',
     name: L('Jesienne smaki', 'Autumn flavours'),
     color: RollColors.red,
     note: L('Jesienne gofry belgijskie, każdy 28 zł.', 'Autumn Belgian waffles, 28 zł each.'),
   ),
   MenuCategory(
     id: 'coffee',
+    image: 'assets/images/gofry_belgijskie_kawa.jpg',
+    imageAlignment: Alignment(-0.9, -0.2),
     name: L('Kawa i herbata', 'Coffee and tea'),
     color: RollColors.sky,
     note: L('M / L to rozmiar kubka. Mleko roślinne +3 zł.', 'M / L is the cup size. Plant milk +3 zł.'),
   ),
   MenuCategory(
     id: 'choco',
+    image: 'assets/images/gofry_belgijskie_kawa.jpg',
+    imageAlignment: Alignment(-0.9, -0.2),
     name: L('Czekolady', 'Hot chocolate'),
     color: RollColors.purple,
     note: L(
@@ -363,7 +378,6 @@ final List<MenuItem> menuItems = [
       'Mix owoców, krem marshmallow, mini pianki, posypka kolorowa, wata cukrowa.',
       'Mixed fruit, marshmallow cream, mini marshmallows, rainbow sprinkles, cotton candy.',
     ),
-    image: 'assets/images/gofr_babelkowy.jpg',
   ),
   _item(
     'bubble-raffaello',
@@ -476,7 +490,6 @@ final List<MenuItem> menuItems = [
       'Wiśnie w żelu, bita śmietana, wiórki czekoladowe.',
       'Cherries in jelly, whipped cream, chocolate shavings.',
     ),
-    image: 'assets/images/gofr_wisniowy.jpg',
     badges: {MenuBadge.isNew},
   ),
   _item(

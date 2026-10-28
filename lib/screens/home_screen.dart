@@ -39,7 +39,7 @@ class HomeScreen extends ConsumerWidget {
           _GlassHero(greeting: l.greeting(session != null ? ', ${session.name}' : ''), tagline: l.tagline),
           SectionTitle(l.promotions, color: RollColors.lime),
           SizedBox(
-            height: 136,
+            height: 190,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -279,6 +279,7 @@ class _PromoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final fg = promo.image == null ? ink : Colors.white;
     return Container(
       width: 260,
       decoration: BoxDecoration(
@@ -288,30 +289,46 @@ class _PromoCard extends StatelessWidget {
           colors: [promo.color, Color.lerp(promo.color, Colors.white, 0.45)!],
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: ink, width: 2),
+        border: Border.all(color: promo.color, width: 3),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          Positioned(right: -18, bottom: -18, child: Swirl(color: Colors.white.withValues(alpha: 0.7), size: 90)),
+          if (promo.image == null)
+            Positioned(right: -18, bottom: -18, child: Swirl(color: Colors.white.withValues(alpha: 0.7), size: 90))
+          else ...[
+            Positioned.fill(child: Image.asset(promo.image!, fit: BoxFit.cover)),
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x331C1030), Color(0xE61C1030)],
+                    stops: [0.2, 0.75],
+                  ),
+                ),
+              ),
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: promo.image == null ? MainAxisAlignment.start : MainAxisAlignment.end,
               children: [
                 Text(
                   promo.title.of(locale),
-                  style: text.titleMedium?.copyWith(color: ink),
+                  style: text.titleMedium?.copyWith(color: fg),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
-                Expanded(
-                  child: Text(
-                    promo.body.of(locale),
-                    style: text.bodyMedium?.copyWith(color: ink),
-                    overflow: TextOverflow.fade,
-                  ),
+                Text(
+                  promo.body.of(locale),
+                  style: text.bodyMedium?.copyWith(color: fg),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

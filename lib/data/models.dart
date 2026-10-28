@@ -12,13 +12,24 @@ class LocalizedText {
 enum MenuBadge { isNew, bestseller }
 
 class MenuCategory {
-  const MenuCategory({required this.id, required this.name, required this.color, this.note});
+  const MenuCategory({
+    required this.id,
+    required this.name,
+    required this.color,
+    this.note,
+    this.image,
+    this.imageAlignment = Alignment.center,
+  });
   final String id;
   final LocalizedText name;
   final Color color;
 
   /// Ceny i zasady całej kategorii, pokazywane nad listą.
   final LocalizedText? note;
+
+  /// Duże zdjęcie na banerze kategorii.
+  final String? image;
+  final Alignment imageAlignment;
 }
 
 /// Jedna cena pozycji, np. rozmiar L albo gofr z bitą śmietaną i lodami.
