@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models.dart';
-import '../data/sample_data.dart';
+import '../data/menu_data.dart';
 import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';
@@ -46,8 +46,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   showCheckmark: false,
                   selectedColor: c.color,
                   backgroundColor: tint(context, c.color, light: 0.3, dark: 0.3),
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w700,
+                  labelStyle: Theme.of(context).chipTheme.labelStyle?.copyWith(
                     color: selected ? ink : Theme.of(context).colorScheme.onSurface,
                   ),
                   side: BorderSide(color: c.color, width: 2),
@@ -63,25 +62,119 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                for (final item in items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _MenuTile(
-                      item: item,
-                      color: cat.color,
-                      locale: locale,
-                      expanded: _expanded == item.id,
-                      onTap: () => setState(() => _expanded = _expanded == item.id ? null : item.id),
+                if (cat.note != null) _CategoryNote(text: cat.note!.of(locale), color: cat.color),
+                for (final entry in _grouped(items))
+                  if (entry.$1 == null)
+                    for (final item in entry.$2)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _MenuTile(
+                          item: item,
+                          color: cat.color,
+                          locale: locale,
+                          expanded: _expanded == item.id,
+                          onTap: () => setState(() => _expanded = _expanded == item.id ? null : item.id),
+                        ),
+                      )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _GroupCard(title: entry.$1!.of(locale), items: entry.$2, color: cat.color, locale: locale),
                     ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(l.sampleData, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
-                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Splits items into consecutive runs sharing the same group (null = standalone tiles).
+List<(LocalizedText?, List<MenuItem>)> _grouped(List<MenuItem> items) {
+  final out = <(LocalizedText?, List<MenuItem>)>[];
+  for (final item in items) {
+    if (out.isNotEmpty && out.last.$1?.pl == item.group?.pl) {
+      out.last.$2.add(item);
+    } else {
+      out.add((item.group, [item]));
+    }
+  }
+  return out;
+}
+
+class _CategoryNote extends StatelessWidget {
+  const _CategoryNote({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tint(context, color, light: 0.35, dark: 0.25),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color, width: 2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({required this.title, required this.items, required this.color, required this.locale});
+  final String title;
+  final List<MenuItem> items;
+  final Color color;
+  final Locale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Card(
+      color: tint(context, color),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color, width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: text.titleMedium),
+            const SizedBox(height: 4),
+            for (final item in items)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.name.of(locale), style: text.bodyLarge),
+                          if (item.description != null) Text(item.description!.of(locale), style: text.bodySmall),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(item.priceLabel, style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -158,7 +251,12 @@ class _MenuTile extends StatelessWidget {
                       child: ProductImage(item: item, color: color),
                     ),
                   const SizedBox(height: 10),
-                  Text(item.description.of(locale), style: text.bodyMedium),
+                  if (item.description != null) Text(item.description!.of(locale), style: text.bodyMedium),
+                  for (final line in item.priceDetails(locale))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(line, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    ),
                 ],
               ],
             ),

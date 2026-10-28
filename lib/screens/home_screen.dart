@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../data/models.dart';
 import '../data/opening_hours.dart';
-import '../data/sample_data.dart';
+import '../data/menu_data.dart';
+import '../data/shop_data.dart';
 import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';

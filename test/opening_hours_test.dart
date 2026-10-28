@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ice_rolls/data/models.dart';
 import 'package:ice_rolls/data/opening_hours.dart';
-import 'package:ice_rolls/data/sample_data.dart';
+import 'package:ice_rolls/data/shop_data.dart';
 
 void main() {
   // 2026-10-19 to poniedziałek.
