@@ -1,0 +1,60 @@
+name: APK na Androida (testy)
+
+on:
+  push:
+    branches: [main, prototyp, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Release podpisany kluczem debug (patrz android/app/build.gradle.kts),
+      # wystarczy do instalacji na telefonie do testów.
+      - run: flutter build apk --release
+
+      - name: Nazwa pliku
+        id: name
+        run: |
+          SHORT=$(git rev-parse --short HEAD)
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+          cp build/app/outputs/flutter-apk/app-release.apk "ice-rolls-test-$SHORT.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ice-rolls-test-${{ steps.name.outputs.short }}
+          path: ice-rolls-test-${{ steps.name.outputs.short }}.apk
+
+      - name: Wersja testowa w Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-${{ github.run_number }}-${{ steps.name.outputs.short }}
+          name: Ice Rolls test ${{ steps.name.outputs.short }} (${{ github.ref_name }})
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            Plik APK do testów z brancha `${{ github.ref_name }}`, commit ${{ github.sha }}.
+            Pobierz plik .apk na telefonie z Androidem i otwórz go, aby zainstalować.
+          files: ice-rolls-test-${{ steps.name.outputs.short }}.apk
