@@ -4,7 +4,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
-import '../widgets/common.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/stamp_card.dart';
@@ -15,12 +14,8 @@ class StampsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
     final session = ref.watch(sessionProvider);
-    return Scaffold(
-      appBar: brandAppBar(context, l.tabStamps, color: RollColors.yellow),
-      body: session == null ? const _SignIn() : const _Card(),
-    );
+    return Scaffold(body: session == null ? const _SignIn() : const _Card());
   }
 }
 

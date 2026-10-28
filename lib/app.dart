@@ -12,13 +12,16 @@ import 'screens/shell.dart';
 import 'screens/stamps_screen.dart';
 import 'state.dart';
 import 'theme.dart';
+import 'widgets/branch_transition.dart';
 import 'widgets/intro_splash.dart';
 
 GoRouter _buildRouter() => GoRouter(
   initialLocation: '/',
   routes: [
-    StatefulShellRoute.indexedStack(
+    StatefulShellRoute(
       builder: (_, _, shell) => AppShell(shell: shell),
+      navigatorContainerBuilder: (_, shell, children) =>
+          BranchTransition(currentIndex: shell.currentIndex, children: children),
       branches: [
         StatefulShellBranch(
           routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())],

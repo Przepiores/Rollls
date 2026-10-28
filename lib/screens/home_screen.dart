@@ -11,7 +11,6 @@ import '../data/shop_data.dart';
 import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';
-import '../widgets/checker.dart';
 import '../widgets/common.dart';
 import '../widgets/stamp_card.dart';
 import '../widgets/swirl.dart';
@@ -29,86 +28,85 @@ class HomeScreen extends ConsumerWidget {
     final news = menuItems.where((i) => i.badges.contains(MenuBadge.isNew)).toList();
     final text = Theme.of(context).textTheme;
 
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          const CheckerBand(),
-          const RainbowStripe(),
-          _GlassHero(greeting: l.greeting(session != null ? ', ${session.name}' : ''), tagline: l.tagline),
-          SectionTitle(l.promotions, color: RollColors.lime),
-          SizedBox(
-            height: 280,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: promotions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => _PromoCard(promo: promotions[i], locale: locale),
-            ),
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        _GlassHero(greeting: l.greeting(session != null ? ', ${session.name}' : ''), tagline: l.tagline),
+        SectionTitle(l.promotions, color: RollColors.lime),
+        SizedBox(
+          height: 300,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            // Miejsce na neonową poświatę wokół kart.
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            itemCount: promotions.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => _PromoCard(promo: promotions[i], locale: locale),
           ),
-          SectionTitle(
-            l.yourCard,
-            color: RollColors.yellow,
-            trailing: TextButton(onPressed: () => context.go('/stamps'), child: Text(l.tabStamps)),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: GestureDetector(
-              onTap: () => context.go('/stamps'),
-              child: session == null
-                  ? Card(
-                      color: tint(context, RollColors.yellow, light: 0.45, dark: 0.35),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: const Icon(Icons.loyalty, size: 32),
-                        title: Text(l.loginForStamps, style: text.titleMedium),
-                        subtitle: Text(l.loginForStampsBody),
+        ),
+        SectionTitle(
+          l.yourCard,
+          color: RollColors.yellow,
+          trailing: TextButton(onPressed: () => context.go('/stamps'), child: Text(l.tabStamps)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: GestureDetector(
+            onTap: () => context.go('/stamps'),
+            child: session == null
+                ? Card(
+                    color: tint(context, RollColors.yellow, light: 0.45, dark: 0.35),
+                    shape: outlinedCard(RollColors.yellow),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: const Icon(Icons.loyalty, size: 32),
+                      title: Text(l.loginForStamps, style: text.titleMedium),
+                      subtitle: Text(l.loginForStampsBody),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      StampCardView(card: card, compact: true),
+                      const SizedBox(height: 8),
+                      Text(
+                        card.rewardReady ? l.rewardReady : l.stampsToReward(card.remaining),
+                        style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        StampCardView(card: card, compact: true),
-                        const SizedBox(height: 8),
-                        Text(
-                          card.rewardReady ? l.rewardReady : l.stampsToReward(card.remaining),
-                          style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-          SectionTitle(
-            l.news,
-            color: RollColors.sky,
-            trailing: TextButton(onPressed: () => context.go('/menu'), child: Text(l.seeMenu)),
-          ),
-          for (final item in news)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-              child: Card(
-                color: tint(context, categories.firstWhere((c) => c.id == item.categoryId).color),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(10),
-                  leading: SizedBox.square(
-                    dimension: 56,
-                    child: ProductImage(
-                      item: item,
-                      color: categories.firstWhere((c) => c.id == item.categoryId).color,
-                      radius: 12,
-                    ),
+                    ],
                   ),
-                  title: Text(item.name.of(locale), style: text.titleMedium),
-                  subtitle: Text(item.priceLabel),
-                  trailing: const BadgeChip(MenuBadge.isNew),
-                  onTap: () => context.go('/menu'),
+          ),
+        ),
+        SectionTitle(
+          l.news,
+          color: RollColors.sky,
+          trailing: TextButton(onPressed: () => context.go('/menu'), child: Text(l.seeMenu)),
+        ),
+        for (final item in news)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Card(
+              color: tint(context, categories.firstWhere((c) => c.id == item.categoryId).color),
+              shape: outlinedCard(categories.firstWhere((c) => c.id == item.categoryId).color),
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(10),
+                leading: SizedBox.square(
+                  dimension: 56,
+                  child: ProductImage(
+                    item: item,
+                    color: categories.firstWhere((c) => c.id == item.categoryId).color,
+                    radius: 12,
+                  ),
                 ),
+                title: Text(item.name.of(locale), style: text.titleMedium),
+                subtitle: Text(item.priceLabel),
+                trailing: const BadgeChip(MenuBadge.isNew),
+                onTap: () => context.go('/menu'),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -289,8 +287,9 @@ class _PromoCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [promo.color, Color.lerp(promo.color, Colors.white, 0.45)!],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: promo.color, width: 3),
+        boxShadow: neonGlow(promo.color),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
