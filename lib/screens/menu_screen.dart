@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models.dart';
 import '../data/menu_data.dart';
-import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -21,13 +20,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final locale = ref.watch(localeProvider);
     final cat = categories.firstWhere((c) => c.id == _category);
     final items = menuItems.where((i) => i.categoryId == _category).toList();
 
     return Scaffold(
-      appBar: brandAppBar(context, l.tabMenu, color: cat.color),
       body: Column(
         children: [
           SizedBox(
@@ -188,10 +185,7 @@ class _GroupCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Card(
       color: tint(context, color),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color, width: 2),
-      ),
+      shape: outlinedCard(color),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
         child: Column(
@@ -245,10 +239,7 @@ class _MenuTile extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Card(
       color: tint(context, color),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color, width: 2),
-      ),
+      shape: outlinedCard(color),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

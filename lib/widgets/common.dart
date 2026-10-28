@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
 import '../theme.dart';
+import 'checker.dart';
 import 'swirl.dart';
 
 class BadgeChip extends StatelessWidget {
@@ -84,6 +85,13 @@ class SectionTitle extends StatelessWidget {
   );
 }
 
+/// Ramka kart z treścią, ta sama na wszystkich ekranach (kolor rolki, 2 px, promień 20).
+/// Zdjęcia (banery, promocje) mają grubszą ramkę 3 px z neonową poświatą i promień 24.
+RoundedRectangleBorder outlinedCard(Color color) => RoundedRectangleBorder(
+  borderRadius: BorderRadius.circular(20),
+  side: BorderSide(color: color, width: 2),
+);
+
 /// Pasek tytułu z kolorową spiralką i tęczowym paskiem pod spodem.
 PreferredSizeWidget brandAppBar(BuildContext context, String title, {Color color = RollColors.pink}) => AppBar(
   title: Row(
@@ -95,3 +103,76 @@ PreferredSizeWidget brandAppBar(BuildContext context, String title, {Color color
   ),
   bottom: const PreferredSize(preferredSize: Size.fromHeight(4), child: RainbowStripe(height: 4)),
 );
+
+/// Wspólny nagłówek zakładek: szachownica, tytuł z kolorową spiralką i logo,
+/// tęczowy pasek. Stoi nad treścią zakładek, więc przy przełączaniu nic nie skacze,
+/// zmienia się tylko tytuł i kolor spiralki.
+class BrandHeader extends StatelessWidget {
+  const BrandHeader({super.key, required this.title, required this.color});
+  final String title;
+  final Color color;
+
+  static const _duration = Duration(milliseconds: 300);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ColoredBox(
+      color: theme.colorScheme.surface,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CheckerBand(height: 12, cell: 12),
+            SizedBox(
+              height: 56,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    TweenAnimationBuilder<Color?>(
+                      tween: ColorTween(end: color),
+                      duration: _duration,
+                      builder: (_, c, _) => Swirl(color: c ?? color, size: 26),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: _duration,
+                        // Stary tytuł znika, zanim pojawi się nowy, żeby się nie nakładały.
+                        switchInCurve: const Interval(0.4, 1, curve: Curves.easeOut),
+                        switchOutCurve: const Interval(0.6, 1, curve: Curves.easeIn),
+                        layoutBuilder: (current, previous) =>
+                            Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+                        child: Text(
+                          title,
+                          key: ValueKey(title),
+                          style: theme.appBarTheme.titleTextStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 38,
+                      height: 38,
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: neonGlow(color, blur: 8),
+                      ),
+                      child: Image.asset('assets/images/logo_emblem.png', semanticLabel: 'Ice Rolls'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const RainbowStripe(height: 4),
+          ],
+        ),
+      ),
+    );
+  }
+}

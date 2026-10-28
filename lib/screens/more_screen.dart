@@ -27,7 +27,6 @@ class MoreScreen extends ConsumerWidget {
     final today = DateTime.now().weekday - 1;
 
     return Scaffold(
-      appBar: brandAppBar(context, l.tabMore, color: RollColors.sky),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -36,10 +35,7 @@ class MoreScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Card(
               color: tint(context, RollColors.sky, light: 0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: RollColors.sky, width: 2),
-              ),
+              shape: outlinedCard(RollColors.sky),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
