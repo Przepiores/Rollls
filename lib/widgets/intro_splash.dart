@@ -90,7 +90,7 @@ class _IntroSplashState extends State<IntroSplash> with SingleTickerProviderStat
                 children: [
                   SizedBox(
                     width: wingsWidth,
-                    height: wingsWidth * 0.85,
+                    height: wingsWidth * 0.72,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [

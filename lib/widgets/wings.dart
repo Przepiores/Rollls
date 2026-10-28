@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Tęczowe skrzydła jak na ścianie lokalu, z delikatnym trzepotem.
-class RainbowWings extends StatefulWidget {
+/// Tęczowe skrzydła jak na ścianie lokalu, nieruchome.
+class RainbowWings extends StatelessWidget {
   const RainbowWings({super.key, this.width = 300, this.height = 170, this.child});
   final double width;
   final double height;
@@ -12,40 +12,15 @@ class RainbowWings extends StatefulWidget {
   final Widget? child;
 
   @override
-  State<RainbowWings> createState() => _RainbowWingsState();
-}
-
-class _RainbowWingsState extends State<RainbowWings> with SingleTickerProviderStateMixin {
-  late final AnimationController _flap = AnimationController(vsync: this, duration: const Duration(seconds: 3));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    reduce ? _flap.stop() : _flap.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _flap.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: widget.width,
-      height: widget.height,
+      width: width,
+      height: height,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _flap,
-              builder: (_, _) => CustomPaint(painter: WingsPainter(flap: Curves.easeInOut.transform(_flap.value))),
-            ),
-          ),
-          ?widget.child,
+          Positioned.fill(child: CustomPaint(painter: WingsPainter())),
+          ?child,
         ],
       ),
     );
@@ -53,10 +28,7 @@ class _RainbowWingsState extends State<RainbowWings> with SingleTickerProviderSt
 }
 
 class WingsPainter extends CustomPainter {
-  WingsPainter({this.flap = 0.5, this.open = 1});
-
-  /// 0–1, pozycja trzepotu.
-  final double flap;
+  WingsPainter({this.open = 1});
 
   /// 0–1, rozłożenie skrzydeł: 0 to pióra schowane za środkiem, 1 to pełne skrzydła.
   final double open;
@@ -75,62 +47,53 @@ class WingsPainter extends CustomPainter {
 
   static const _feathersPerRow = 15;
 
-  // Wachlarz piór: od prawie pionowo w górę do pionowo w dół (radiany, 0 = poziomo na zewnątrz).
-  static const _fanTop = -1.42;
-  static const _fanBottom = 1.5;
+  // Wachlarz piór: od prawie pionowo w górę do prawie pionowo w dół (radiany, 0 = poziomo na zewnątrz).
+  static const _fanTop = -1.35;
+  static const _fanBottom = 1.45;
 
-  // Oba skrzydła razem tworzą serce: szerokie u góry, zwężone w szpic na dole.
-  // Krzywa serca x = 16 sin³t, y = -(13 cos t - 5 cos 2t - 2 cos 3t - cos 4t), środek w (0, 0):
-  // wcięcie u góry na y = -5, czubki łuków na y ≈ -12, szpic na y = 17.
-  static const _heartHalfWidth = 16.0;
-  static const _heartTop = 12.0;
-  static const _heartBottom = 17.0;
+  // Obrys prawego skrzydła w polu od -1 do 1, środek w (0, 0), y rośnie w dół.
+  // Skrzydło rozłożone w górę i na zewnątrz, a dolna krawędź zwęża się skosem do środka pod logo.
+  // Kąty kolejnych punktów rosną, więc każdy promień ze środka trafia w obrys dokładnie raz.
+  static const _outline = [
+    Offset(0.10, -0.55),
+    Offset(0.35, -0.80),
+    Offset(0.65, -0.97),
+    Offset(0.90, -1.00),
+    Offset(1.00, -0.70),
+    Offset(1.00, -0.30),
+    Offset(0.92, 0.05),
+    Offset(0.70, 0.35),
+    Offset(0.45, 0.62),
+    Offset(0.20, 0.88),
+    Offset(0.06, 1.00),
+  ];
 
-  /// Odległość od środka do krawędzi prawej połówki serca, próbkowana co kąt (od -π/2 do π/2).
-  static final List<double> _heartRadius = _buildHeartRadius();
-
-  static List<double> _buildHeartRadius() {
-    const samples = 181;
-    final radius = List<double>.filled(samples, 0);
-    for (var i = 0; i <= 2000; i++) {
-      final t = math.pi * i / 2000;
-      final x = 16 * math.pow(math.sin(t), 3);
-      final y = -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t));
-      final angle = math.atan2(y, x);
-      final k = ((angle + math.pi / 2) / math.pi * (samples - 1)).round().clamp(0, samples - 1);
-      radius[k] = math.max(radius[k], math.sqrt(x * x + y * y));
+  /// Odległość od środka do obrysu w kierunku [angle] (w polu od -1 do 1).
+  static double _outlineRadius(double angle) {
+    final dir = Offset(math.cos(angle), math.sin(angle));
+    for (var i = 0; i < _outline.length - 1; i++) {
+      final a = _outline[i];
+      final b = _outline[i + 1];
+      if (angle < a.direction || angle > b.direction) continue;
+      // Przecięcie promienia ze środka z odcinkiem a–b.
+      final e = b - a;
+      final denom = dir.dx * e.dy - dir.dy * e.dx;
+      if (denom.abs() < 1e-9) return a.distance;
+      return (a.dx * e.dy - a.dy * e.dx) / denom;
     }
-    // Uzupełnij kąty, w które nie trafiła żadna próbka.
-    for (var k = 1; k < samples; k++) {
-      if (radius[k] == 0) radius[k] = radius[k - 1];
-    }
-    return radius;
-  }
-
-  /// Krawędź serca w kierunku [dir], w jednostkach krzywej, rozciągnięta o skale [sx], [sy].
-  static double _heartEdge(Offset dir, double sx, double sy) {
-    // Kąt na niezniekształconej krzywej, w którym leży ten kierunek po rozciągnięciu.
-    final angle = math.atan2(dir.dy / sy, dir.dx / sx);
-    final k = ((angle + math.pi / 2) / math.pi * (_heartRadius.length - 1)).clamp(0.0, _heartRadius.length - 1.0);
-    final lo = k.floor();
-    final hi = math.min(lo + 1, _heartRadius.length - 1);
-    final r = _heartRadius[lo] + (_heartRadius[hi] - _heartRadius[lo]) * (k - lo);
-    return r * math.sqrt(math.pow(math.cos(angle) * sx, 2) + math.pow(math.sin(angle) * sy, 2));
+    return angle < _outline.first.direction ? _outline.first.distance : _outline.last.distance;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Serce wpisane w pole widżetu, więc nic nie jest ucięte; najwyżej lekko poszerzone.
-    final sy = size.height * 0.97 / (_heartTop + _heartBottom);
-    // Środek krzywej jest trochę poniżej środka pola, bo szpic na dole sięga dalej niż łuki u góry.
-    final origin = size.center(Offset(0, -(_heartBottom - _heartTop) / 2 * sy));
-    final sx = math.min(size.width / 2 * 0.97 / _heartHalfWidth, sy * 1.5);
-    final tilt = (flap - 0.5) * 0.1;
+    final origin = size.center(Offset.zero);
+    // Obrys wpisany w pole widżetu, więc nic nie jest ucięte.
+    final sx = size.width / 2 * 0.97;
+    final sy = size.height / 2 * 0.97;
     for (final side in [-1.0, 1.0]) {
       canvas.save();
       canvas.translate(origin.dx, origin.dy);
       canvas.scale(side, 1);
-      canvas.rotate(-tilt);
       _wing(canvas, sx, sy);
       canvas.restore();
     }
@@ -158,12 +121,15 @@ class WingsPainter extends CustomPainter {
         if (p <= 0) continue;
         final target = _fanTop + (_fanBottom - _fanTop) * t;
         // Złożone pióra leżą płasko lekko w górę, rozkładają się do wachlarza.
-        // Sprężyste dobicie nie może przerzucić dolnych piór za szpic serca.
+        // Sprężyste dobicie nie może przerzucić dolnych piór za środek.
         final angle = math.min(-0.2 + (target + 0.2) * p, _fanBottom);
         final dir = Offset(math.cos(angle), math.sin(angle));
         final normal = Offset(-dir.dy, dir.dx);
-        // Długość z docelowego kierunku, żeby obracające się pióro nie wystawało poza serce.
-        final edge = _heartEdge(Offset(math.cos(target), math.sin(target)), sx, sy);
+        // Długość z docelowego kierunku, żeby obracające się pióro nie wystawało poza obrys.
+        // Kierunek w polu od -1 do 1 różni się od ekranowego, bo pole jest rozciągnięte.
+        final unitAngle = math.atan2(math.sin(target) / sy, math.cos(target) / sx);
+        final r = _outlineRadius(unitAngle);
+        final edge = r * Offset(math.cos(unitAngle) * sx, math.sin(unitAngle) * sy).distance;
         final rootLen = edge * 0.3;
         final base = dir * rootLen;
         final len = (edge - rootLen) * reach * (0.2 + 0.8 * p);
@@ -209,5 +175,5 @@ class WingsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(WingsPainter old) => old.flap != flap || old.open != open;
+  bool shouldRepaint(WingsPainter old) => old.open != open;
 }
