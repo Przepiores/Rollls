@@ -62,3 +62,8 @@ final scansLeftTodayProvider = FutureProvider<int>((ref) async {
   if (session == null) return StampCodeService.dailyScanLimit;
   return ref.watch(stampCodeServiceProvider).scansLeftToday(session.name);
 });
+
+/// Kod z naklejki przy ladzie. Prototyp: jedna naklejka ważna do końca 2027 r.
+final counterStickerProvider = FutureProvider<String>(
+  (ref) => ref.watch(stampCodeServiceProvider).issueSticker(id: 'lada-1', validUntil: DateTime.utc(2028)),
+);

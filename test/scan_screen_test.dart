@@ -62,7 +62,7 @@ void main() {
     expect(find.text('otwórz'), findsOneWidget);
 
     await open();
-    await tester.tap(find.text('Zeskanuj przykładowy kod (prototyp)'));
+    await tester.tap(find.text('Zeskanuj naklejkę z lady (prototyp)'));
     await tester.pumpAndSettle();
     expect(find.text('Dodano 1 pieczątkę'), findsOneWidget);
     await tester.tap(find.text('OK'));

@@ -55,11 +55,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     }
   }
 
-  /// Prototyp: wydaje kod tak jak panel sklepu i od razu go realizuje.
-  Future<void> _demoScan() async {
-    final code = await ref.read(stampCodeServiceProvider).issue(stamps: 1, validFor: const Duration(minutes: 2));
-    await _claim(code);
-  }
+  /// Prototyp: skanuje kod z naklejki przy ladzie bez użycia aparatu.
+  Future<void> _demoScan() async => _claim(await ref.read(counterStickerProvider.future));
 
   Future<void> _showResult(ClaimResult result) {
     final l = AppLocalizations.of(context);

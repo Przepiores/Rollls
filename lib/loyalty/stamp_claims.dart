@@ -26,6 +26,11 @@ abstract interface class StampCodeService {
   /// Dla obsługi: nowy jednorazowy kod do pokazania lub wydruku.
   Future<String> issue({required int stamps, required Duration validFor});
 
+  /// Dla właściciela: wielorazowy kod do wydrukowania na naklejkę przy ladzie.
+  /// Daje 1 pieczątkę za skan, a chroni go tylko dzienny limit skanów.
+  /// Nową naklejkę (inny [id]) drukuje się, gdy stara wycieknie lub wygaśnie.
+  Future<String> issueSticker({required String id, required DateTime validUntil});
+
   /// Dla klienta: sprawdza kod i nalicza pieczątki na konto [userId].
   Future<ClaimResult> claim(String raw, {required String userId, required int stampsMissing});
 
@@ -56,6 +61,10 @@ class LocalStampCodeService implements StampCodeService {
       StampCode.issue(stamps: stamps, expiresAt: _clock().add(validFor)).sign(_key);
 
   @override
+  Future<String> issueSticker({required String id, required DateTime validUntil}) async =>
+      StampCode(nonce: id, stamps: 1, expiresAt: validUntil, sticker: true).sign(_key);
+
+  @override
   Future<int> scansLeftToday(String userId) async => StampCodeService.dailyScanLimit - _scansToday(userId);
 
   @override
@@ -70,12 +79,12 @@ class LocalStampCodeService implements StampCodeService {
     final code = StampCode.verify(raw, _key);
     if (code == null) return result(ClaimStatus.invalid);
     if (!_clock().isBefore(code.expiresAt)) return result(ClaimStatus.expired);
-    if (_usedNonces.contains(code.nonce)) return result(ClaimStatus.alreadyUsed);
+    if (!code.sticker && _usedNonces.contains(code.nonce)) return result(ClaimStatus.alreadyUsed);
     if (used >= StampCodeService.dailyScanLimit) return result(ClaimStatus.dailyLimit);
     // Pełna karta: kod zostaje ważny, żeby klient mógł go użyć po odebraniu nagrody.
     if (stampsMissing <= 0) return result(ClaimStatus.cardFull);
 
-    _usedNonces.add(code.nonce);
+    if (!code.sticker) _usedNonces.add(code.nonce);
     _scansByDay[_dayKey(userId)] = used + 1;
     return result(ClaimStatus.added, stamps: code.stamps.clamp(1, stampsMissing));
   }

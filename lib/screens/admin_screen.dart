@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../l10n/app_localizations.dart';
+import '../loyalty/stamp_claims.dart';
 import '../loyalty/stamp_code.dart';
 import '../widgets/common.dart';
 import '../state.dart';
@@ -47,6 +48,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          const _CounterSticker(),
+          const SizedBox(height: 28),
           const _IssueStampCode(),
           const SizedBox(height: 28),
           Text(l.scanCustomer, style: text.titleLarge),
@@ -217,6 +220,39 @@ class _IssueStampCodeState extends ConsumerState<_IssueStampCode> {
             style: text.bodyMedium,
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Kod do wydrukowania i przyklejenia przy ladzie.
+class _CounterSticker extends ConsumerWidget {
+  const _CounterSticker();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final code = ref.watch(counterStickerProvider).value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l.counterSticker, style: text.titleLarge),
+        const SizedBox(height: 4),
+        Text(l.counterStickerHint(StampCodeService.dailyScanLimit), style: text.bodyMedium),
+        const SizedBox(height: 12),
+        if (code != null)
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: RollColors.pink, width: 3),
+              ),
+              child: QrImageView(data: code, size: 200, backgroundColor: Colors.white),
+            ),
+          ),
       ],
     );
   }

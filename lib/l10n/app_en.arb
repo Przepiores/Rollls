@@ -69,13 +69,16 @@
   "claimDailyLimit": "You've already scanned {limit} codes today. Come back tomorrow!",
   "@claimDailyLimit": {"placeholders": {"limit": {"type": "int"}}},
   "claimCardFull": "Your card is full! Collect your free ice cream first and keep the code for later",
-  "scanDemo": "Scan a sample code (prototype)",
+  "scanDemo": "Scan the counter sticker (prototype)",
   "cameraError": "No camera access. Allow it in your phone settings.",
   "ok": "OK",
-  "stampCodeTitle": "Stamp code for a customer",
+  "stampCodeTitle": "Single-use code (several stamps at once)",
   "showStampCode": "Show code",
   "stampCodeValid": "Single use, valid for {seconds} s",
   "@stampCodeValid": {"placeholders": {"seconds": {"type": "int"}}},
   "stampCodeExpired": "Code expired",
-  "newStampCode": "New code"
+  "newStampCode": "New code",
+  "counterSticker": "Counter sticker",
+  "counterStickerHint": "Print it and stick it by the till. Each scan gives 1 stamp, at most {limit} a day per account.",
+  "@counterStickerHint": {"placeholders": {"limit": {"type": "int"}}}
 }

@@ -75,13 +75,16 @@
   "claimDailyLimit": "Dziś zeskanowano już {limit} kody. Wróć jutro!",
   "@claimDailyLimit": {"placeholders": {"limit": {"type": "int"}}},
   "claimCardFull": "Karta pełna! Najpierw odbierz darmowego loda, a kod zachowaj na później",
-  "scanDemo": "Zeskanuj przykładowy kod (prototyp)",
+  "scanDemo": "Zeskanuj naklejkę z lady (prototyp)",
   "cameraError": "Brak dostępu do aparatu. Zezwól na niego w ustawieniach telefonu.",
   "ok": "OK",
-  "stampCodeTitle": "Kod na pieczątki dla klienta",
+  "stampCodeTitle": "Kod jednorazowy (kilka pieczątek naraz)",
   "showStampCode": "Pokaż kod",
   "stampCodeValid": "Jednorazowy, ważny jeszcze {seconds} s",
   "@stampCodeValid": {"placeholders": {"seconds": {"type": "int"}}},
   "stampCodeExpired": "Kod wygasł",
-  "newStampCode": "Nowy kod"
+  "newStampCode": "Nowy kod",
+  "counterSticker": "Naklejka na ladę",
+  "counterStickerHint": "Wydrukuj i przyklej przy kasie. Każdy skan to 1 pieczątka, najwyżej {limit} dziennie na konto.",
+  "@counterStickerHint": {"placeholders": {"limit": {"type": "int"}}}
 }

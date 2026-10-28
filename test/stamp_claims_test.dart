@@ -75,4 +75,21 @@ void main() {
     final code = StampCode.issue(stamps: StampCode.maxStamps + 1, expiresAt: now).sign([1]);
     expect(StampCode.verify(code, [1]), isNull);
   });
+
+  test('naklejka jest wielorazowa, ale liczy się do limitu 2 dziennie', () async {
+    final sticker = await service.issueSticker(id: 'lada-1', validUntil: DateTime(2028));
+    expect((await claim(sticker)).stamps, 1);
+    expect((await claim(sticker)).status, ClaimStatus.added);
+    expect((await claim(sticker)).status, ClaimStatus.dailyLimit);
+    expect((await claim(sticker, user: 'ola')).status, ClaimStatus.added);
+    now = DateTime(2026, 10, 29, 12);
+    expect((await claim(sticker)).status, ClaimStatus.added);
+  });
+
+  test('naklejki nie da się przerobić na kod z więcej pieczątkami ani jednorazowy', () async {
+    final sticker = await service.issueSticker(id: 'lada-1', validUntil: DateTime(2028));
+    final parts = sticker.split('.');
+    expect((await claim([...parts.take(2), '3', ...parts.skip(3)].join('.'))).status, ClaimStatus.invalid);
+    expect((await claim(['IR1', ...parts.skip(1)].join('.'))).status, ClaimStatus.invalid);
+  });
 }
