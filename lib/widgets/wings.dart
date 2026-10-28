@@ -61,62 +61,109 @@ class WingsPainter extends CustomPainter {
   /// 0–1, rozłożenie skrzydeł: 0 to pióra schowane za środkiem, 1 to pełne skrzydła.
   final double open;
 
-  // Od zewnątrz do środka, jak pióra na ścianie lokalu.
-  static const _layers = [
-    Color(0xFF8A2A9B),
-    Color(0xFF2F6FE0),
-    Color(0xFF2BAE66),
-    Color(0xFFF7C923),
-    Color(0xFFF39237),
-    Color(0xFFE8332A),
+  // Rzędy piór od zewnątrz do środka, jak na ścianie lokalu:
+  // fiolet i błękit na końcach, przez zieleń, żółty i pomarańcz do różu przy środku.
+  static const _rows = [
+    Color(0xFF8B4FD8),
+    Color(0xFF4F7BF0),
+    Color(0xFF3FB8F0),
+    Color(0xFF3CC77A),
+    Color(0xFFF5D03B),
+    Color(0xFFF7943A),
+    Color(0xFFF2557A),
   ];
+
+  static const _feathersPerRow = 12;
+
+  // Wachlarz piór: od prawie pionowo w górę do skosu w dół (radiany, 0 = poziomo na zewnątrz).
+  static const _fanTop = -1.2;
+  static const _fanBottom = 1.0;
 
   @override
   void paint(Canvas canvas, Size size) {
     final origin = size.center(Offset.zero);
-    // Pióra mieszczą się w polu widżetu, żeby nic nie było ucięte.
-    final maxLen = math.min(size.width / 2 * 0.98, size.height / 2 / 0.74);
+    // Końce piór leżą na elipsie wpisanej w pole widżetu, więc nic nie jest ucięte.
+    final rx = size.width / 2 * 0.98;
+    final ry = size.height / 2 * 0.98;
     final tilt = (flap - 0.5) * 0.12;
     for (final side in [-1.0, 1.0]) {
       canvas.save();
       canvas.translate(origin.dx, origin.dy);
       canvas.scale(side, 1);
       canvas.rotate(-tilt);
-      _wing(canvas, maxLen);
+      _wing(canvas, rx, ry);
       canvas.restore();
     }
   }
 
-  void _wing(Canvas canvas, double maxLen) {
-    const feathers = 7;
-    for (var layer = 0; layer < _layers.length; layer++) {
-      final color = _layers[layer];
-      final len = maxLen * (1 - layer * 0.13);
-      final stagger = layer.isEven ? 0.0 : 0.5;
-      final paint = Paint()..style = PaintingStyle.fill;
-      for (var f = 0; f < feathers; f++) {
-        final t = (f + stagger) / (feathers - 0.5);
-        // Wewnętrzne warstwy i dolne pióra wysuwają się chwilę później.
-        final delay = (_layers.length - 1 - layer) * 0.06 + t * 0.12;
-        final p = Curves.easeOutBack.transform(((open - delay) / (1 - 0.42)).clamp(0.0, 1.0));
+  void _wing(Canvas canvas, double rx, double ry) {
+    final light = Paint()..style = PaintingStyle.fill;
+    final shade = Paint()..style = PaintingStyle.fill;
+    final spine = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.6
+      ..color = Colors.white.withValues(alpha: 0.35);
+    final rootLen = rx * 0.1;
+    for (var row = 0; row < _rows.length; row++) {
+      final color = _rows[row];
+      final next = _rows[math.min(row + 1, _rows.length - 1)];
+      final reach = 1 - row * 0.115;
+      // Co drugi rząd przesunięty o pół pióra, żeby tylne pióra wystawały między przednimi.
+      final stagger = row.isEven ? 0.0 : 0.5;
+      final count = _feathersPerRow - (row.isEven ? 0 : 1);
+      for (var f = 0; f < count; f++) {
+        final t = (f + stagger) / (_feathersPerRow - 1);
+        // Zewnętrzne rzędy rozkładają się pierwsze, górne pióra chwilę przed dolnymi.
+        final delay = row * 0.05 + t * 0.1;
+        final p = Curves.easeOutBack.transform(((open - delay) / (1 - 0.4)).clamp(0.0, 1.0));
         if (p <= 0) continue;
-        // Pióra rozkładają się od skosu w górę do lekkiego opadu.
-        final angle = 0.25 + (-0.8 + t * 1.5 - 0.25) * p;
+        final target = _fanTop + (_fanBottom - _fanTop) * t;
+        // Złożone pióra leżą płasko lekko w górę, rozkładają się do wachlarza.
+        final angle = -0.2 + (target + 0.2) * p;
         final dir = Offset(math.cos(angle), math.sin(angle));
         final normal = Offset(-dir.dy, dir.dx);
-        final base = dir * (maxLen * 0.14);
-        final featherLen = len * (1 - (t - 0.35).abs() * 0.35) * (0.15 + 0.85 * p);
-        final tip = dir * featherLen;
-        final mid = Offset.lerp(base, tip, 0.62)!;
-        final w = featherLen * 0.19;
-        final path = Path()
+        final edge = 1 / math.sqrt(math.pow(dir.dx / rx, 2) + math.pow(dir.dy / ry, 2));
+        final base = dir * rootLen;
+        // Najdłuższe pióra idą skosem w górę, dolne są krótsze, jak w prawdziwym skrzydle.
+        final shape = 1 - 0.4 * math.pow((target + 0.55) / 1.55, 2);
+        final len = (edge * shape - rootLen) * reach * (0.2 + 0.8 * p);
+        if (len <= 0) continue;
+        final tip = dir * (rootLen + len);
+        final w = math.max(len * 0.13, 2.5);
+        // Kolor lekko przechodzi w kolejny rząd, tak jak na ścianie.
+        final c = Color.lerp(color, next, ((f * 37) % 10) / 40)!;
+        final c1 = base + dir * (len * 0.3);
+        final c2 = base + dir * (len * 0.72);
+        // Pióro jak zgięty papier: jasna i ciemniejsza połowa przy grzbiecie.
+        final top = Path()
           ..moveTo(base.dx, base.dy)
-          ..quadraticBezierTo(mid.dx + normal.dx * w, mid.dy + normal.dy * w, tip.dx, tip.dy)
-          ..quadraticBezierTo(mid.dx - normal.dx * w, mid.dy - normal.dy * w, base.dx, base.dy)
+          ..cubicTo(
+            c1.dx - normal.dx * w,
+            c1.dy - normal.dy * w,
+            c2.dx - normal.dx * w * 0.8,
+            c2.dy - normal.dy * w * 0.8,
+            tip.dx,
+            tip.dy,
+          )
           ..close();
-        paint.shader = LinearGradient(colors: [Color.lerp(color, Colors.white, 0.25)!, color])
-            .createShader(Rect.fromPoints(base, tip));
-        canvas.drawPath(path, paint);
+        final bottom = Path()
+          ..moveTo(base.dx, base.dy)
+          ..cubicTo(
+            c1.dx + normal.dx * w,
+            c1.dy + normal.dy * w,
+            c2.dx + normal.dx * w * 0.8,
+            c2.dy + normal.dy * w * 0.8,
+            tip.dx,
+            tip.dy,
+          )
+          ..close();
+        final rect = Rect.fromPoints(base, tip);
+        light.shader = LinearGradient(colors: [c, Color.lerp(c, Colors.white, 0.3)!]).createShader(rect);
+        shade.shader = LinearGradient(colors: [Color.lerp(c, Colors.black, 0.22)!, Color.lerp(c, Colors.black, 0.08)!])
+            .createShader(rect);
+        canvas.drawPath(top, light);
+        canvas.drawPath(bottom, shade);
+        canvas.drawLine(base + dir * (len * 0.15), tip - dir * (len * 0.08), spine);
       }
     }
   }
