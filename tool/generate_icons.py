@@ -9,7 +9,7 @@ Uruchom z katalogu głównego repo: python3 tool/generate_icons.py
 import json
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
 LOGO = ROOT / "assets/images/logo.png"
@@ -19,8 +19,13 @@ WHITE = (255, 255, 255, 255)
 
 
 def emblem() -> Image.Image:
-    logo = Image.open(LOGO).convert("RGBA")
-    return logo.crop(CIRCLE_BOX)
+    """Okrąg z logo, przezroczysty poza czarnym obrysem."""
+    e = Image.open(LOGO).convert("RGBA").crop(CIRCLE_BOX)
+    scale = 4  # maska rysowana większa i zmniejszana, żeby krawędź była gładka
+    mask = Image.new("L", (e.width * scale, e.height * scale), 0)
+    ImageDraw.Draw(mask).ellipse((scale * 3, scale * 3, (e.width - 3) * scale, (e.height - 3) * scale), fill=255)
+    e.putalpha(mask.resize(e.size, Image.LANCZOS))
+    return e
 
 
 def icon(size: int, scale: float, background=WHITE) -> Image.Image:
@@ -38,18 +43,23 @@ def android() -> None:
     densities = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
     for name, f in densities.items():
         d = res / f"mipmap-{name}"
-        icon(round(48 * f), 0.86).save(d / "ic_launcher.png")
-        # Adaptacyjna ikona: 108 dp, logo w bezpiecznej strefie 66 dp.
-        icon(round(108 * f), 0.6, background=(0, 0, 0, 0)).save(d / "ic_launcher_foreground.png")
+        # Okrągła ikona: sam okrąg z logo, bez tła dookoła.
+        round_icon = icon(round(48 * f), 0.96, background=(0, 0, 0, 0))
+        round_icon.save(d / "ic_launcher.png")
+        round_icon.save(d / "ic_launcher_round.png")
+        # Adaptacyjna ikona: 108 dp, launcher pokazuje koło ~72 dp, obrys logo leży przy jego krawędzi.
+        icon(round(108 * f), 0.69, background=(0, 0, 0, 0)).save(d / "ic_launcher_foreground.png")
     v26 = res / "mipmap-anydpi-v26"
     v26.mkdir(exist_ok=True)
-    (v26 / "ic_launcher.xml").write_text(
+    adaptive = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
         '    <background android:drawable="@color/ic_launcher_background"/>\n'
         '    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
         "</adaptive-icon>\n"
     )
+    (v26 / "ic_launcher.xml").write_text(adaptive)
+    (v26 / "ic_launcher_round.xml").write_text(adaptive)
     (res / "values/colors.xml").write_text(
         '<?xml version="1.0" encoding="utf-8"?>\n'
         "<resources>\n"
@@ -64,15 +74,16 @@ def ios() -> None:
     for img in contents["images"]:
         pt = float(img["size"].split("x")[0])
         px = round(pt * int(img["scale"].rstrip("x")))
-        # iOS nie przyjmuje przezroczystości w ikonie.
-        icon(px, 0.84).convert("RGB").save(d / img["filename"])
+        # iOS nie przyjmuje przezroczystości w ikonie i zawsze przycina ją do zaokrąglonego
+        # kwadratu, więc okrąg leży na białym tle.
+        icon(px, 0.9).convert("RGB").save(d / img["filename"])
 
 
 def web() -> None:
     d = ROOT / "web"
-    icon(32, 0.9).save(d / "favicon.png")
+    icon(32, 0.96, background=(0, 0, 0, 0)).save(d / "favicon.png")
     for s in (192, 512):
-        icon(s, 0.86).save(d / f"icons/Icon-{s}.png")
+        icon(s, 0.96, background=(0, 0, 0, 0)).save(d / f"icons/Icon-{s}.png")
         icon(s, 0.7).save(d / f"icons/Icon-maskable-{s}.png")
 
 
