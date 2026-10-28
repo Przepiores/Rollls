@@ -8,6 +8,7 @@ import 'screens/admin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/more_screen.dart';
+import 'screens/scan_screen.dart';
 import 'screens/shell.dart';
 import 'screens/stamps_screen.dart';
 import 'state.dart';
@@ -35,6 +36,7 @@ GoRouter _buildRouter() => GoRouter(
       ],
     ),
     GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
+    GoRoute(path: '/scan', builder: (_, _) => const ScanScreen()),
   ],
 );
 

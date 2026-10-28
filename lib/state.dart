@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/models.dart';
+import 'loyalty/stamp_claims.dart';
 
 /// Ustawienia i stan klienta. W prototypie trzymane w pamięci,
 /// w wersji z Firebase przejdą do Firestore i Firebase Auth.
@@ -52,3 +53,12 @@ class StampCardNotifier extends Notifier<StampCard> {
 }
 
 final stampCardProvider = NotifierProvider<StampCardNotifier, StampCard>(StampCardNotifier.new);
+
+final stampCodeServiceProvider = Provider<StampCodeService>((ref) => LocalStampCodeService());
+
+/// Ile skanów kodu zostało dziś zalogowanemu klientowi.
+final scansLeftTodayProvider = FutureProvider<int>((ref) async {
+  final session = ref.watch(sessionProvider);
+  if (session == null) return StampCodeService.dailyScanLimit;
+  return ref.watch(stampCodeServiceProvider).scansLeftToday(session.name);
+});

@@ -36,6 +36,7 @@ void main() {
     await tester.tap(find.text('Kontynuuj z Google'));
     await tester.pumpAndSettle();
     expect(find.text('7 z 10 pieczątek'), findsOneWidget);
+    expect(find.text('Zeskanuj kod na pieczątkę'), findsOneWidget);
 
     await tester.tap(find.text('Więcej'));
     await tester.pumpAndSettle();
