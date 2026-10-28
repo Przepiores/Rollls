@@ -27,15 +27,16 @@ const categories = [
   ),
   MenuCategory(
     id: 'freak',
-    image: 'assets/images/gofr_babelkowy.jpg',
+    image: 'assets/images/freak_shake.jpg',
+    imageAlignment: Alignment(0, -0.55),
     name: L('Freak Shake', 'Freak Shake'),
     color: RollColors.purple,
     note: L('Każdy Freak Shake 29,90 zł.', 'Every Freak Shake is 29.90 zł.'),
   ),
   MenuCategory(
     id: 'classic',
-    image: 'assets/images/gofry_belgijskie_kawa.jpg',
-    imageAlignment: Alignment(0.6, -0.15),
+    image: 'assets/images/classic_shake.jpg',
+    imageAlignment: Alignment(0, -0.6),
     name: L('Classic Shake', 'Classic Shake'),
     color: RollColors.sky,
     note: L(
@@ -71,8 +72,8 @@ const categories = [
   ),
   MenuCategory(
     id: 'coffee',
-    image: 'assets/images/gofry_belgijskie_kawa.jpg',
-    imageAlignment: Alignment(-0.9, -0.2),
+    image: 'assets/images/herbata.jpg',
+    imageAlignment: Alignment(0, -0.1),
     name: L('Kawa i herbata', 'Coffee and tea'),
     color: RollColors.sky,
     note: L('M / L to rozmiar kubka. Mleko roślinne +3 zł.', 'M / L is the cup size. Plant milk +3 zł.'),
