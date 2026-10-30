@@ -85,6 +85,9 @@ def web() -> None:
     for s in (192, 512):
         icon(s, 0.96, background=(0, 0, 0, 0)).save(d / f"icons/Icon-{s}.png")
         icon(s, 0.7).save(d / f"icons/Icon-maskable-{s}.png")
+    # Safari na iPhonie zamienia przezroczystość na czarne tło, więc ikona ekranu
+    # początkowego ma białe tło, jak ikona aplikacji iOS.
+    icon(180, 0.9).convert("RGB").save(d / "icons/apple-touch-icon.png")
 
 
 def emblem_asset() -> None:
