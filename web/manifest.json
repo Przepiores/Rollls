@@ -1,11 +1,13 @@
 {
     "name": "Ice Rolls",
     "short_name": "Ice Rolls",
+    "description": "Ice Rolls we Wrocławiu: lody tajskie rolowane i gofry. Menu, cyfrowe pieczątki i promocje.",
+    "lang": "pl",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Menu, pieczątki i promocje Ice Rolls.",
+    "background_color": "#F6EEFF",
+    "theme_color": "#8A2A9B",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

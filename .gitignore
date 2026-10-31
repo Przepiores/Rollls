@@ -49,3 +49,10 @@ app.*.map.json
 
 # Pliki generowane przez flutter gen-l10n
 lib/l10n/app_localizations*.dart
+
+# Sekrety: nigdy do repo
+.env
+.env.*
+*.keystore
+*.jks
+key.properties
