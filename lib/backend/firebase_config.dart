@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 /// Publiczna konfiguracja klienta Firebase (to nie są sekrety: te same
 /// wartości widzi każdy, kto otworzy stronę PWA). Dostęp do danych chronią
-/// reguły w `firestore.rules` i Cloud Functions.
+/// reguły w `firestore.rules`.
 ///
 /// Wartości z konsoli Firebase: Ustawienia projektu → Ogólne → Twoje aplikacje.
 /// Dopóki [projectId] jest pusty, aplikacja działa na danych lokalnych
@@ -15,9 +15,6 @@ abstract final class FirebaseConfig {
   static const webAppId = String.fromEnvironment('FIREBASE_WEB_APP_ID');
   static const androidAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
   static const iosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
-
-  /// Region Cloud Functions: Warszawa.
-  static const functionsRegion = 'europe-central2';
 
   /// Ustaw `--dart-define=BACKEND=local`, żeby wymusić dane lokalne mimo konfiguracji.
   static const _forceLocal = String.fromEnvironment('BACKEND') == 'local';

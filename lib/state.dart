@@ -68,16 +68,18 @@ final _stampCardStream = StreamProvider<StampCard>((ref) {
 /// Karta pieczątek zalogowanego klienta.
 final stampCardProvider = Provider<StampCard>((ref) => ref.watch(_stampCardStream).value ?? const StampCard());
 
-final stampCodeServiceProvider = Provider<StampCodeService>((ref) => ref.watch(backendProvider).stampCodes);
+/// Null, gdy klient nie skanuje kodów sam (Firebase na planie Spark).
+final stampCodeServiceProvider = Provider<StampCodeService?>((ref) => ref.watch(backendProvider).stampCodes);
 
 /// Ile skanów kodu zostało dziś zalogowanemu klientowi.
 final scansLeftTodayProvider = FutureProvider<int>((ref) async {
   final uid = ref.watch(sessionProvider.select((s) => s?.uid));
-  if (uid == null) return StampCodeService.dailyScanLimit;
-  return ref.watch(stampCodeServiceProvider).scansLeftToday(uid);
+  final service = ref.watch(stampCodeServiceProvider);
+  if (uid == null || service == null) return StampCodeService.dailyScanLimit;
+  return service.scansLeftToday(uid);
 });
 
 /// Kod z naklejki przy ladzie. Prototyp: jedna naklejka ważna do końca 2027 r.
 final counterStickerProvider = FutureProvider<String>(
-  (ref) => ref.watch(stampCodeServiceProvider).issueSticker(id: 'lada-1', validUntil: DateTime.utc(2028)),
+  (ref) => ref.watch(stampCodeServiceProvider)!.issueSticker(id: 'lada-1', validUntil: DateTime.utc(2028)),
 );

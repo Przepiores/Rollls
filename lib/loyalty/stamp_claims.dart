@@ -16,10 +16,10 @@ class ClaimResult {
 
 /// Wydawanie i realizacja kodów na pieczątki.
 ///
-/// Prototyp używa [LocalStampCodeService]. W wersji z Firebase ten sam
-/// interfejs będą miały wywołania Cloud Functions `issueStampCode`
-/// i `claimStampCode`: klucz sklepu, zużyte kody i licznik skanów
-/// będą tylko na serwerze, a aplikacja wyśle sam tekst z kodu QR.
+/// Działa tylko w prototypie ([LocalStampCodeService]). Bezpieczna wersja
+/// wymaga serwera (Cloud Functions, plan Blaze) z kluczem sklepu, zużytymi
+/// kodami i licznikiem skanów. Na planie Spark pieczątki dopisuje obsługa
+/// po zeskanowaniu kodu klienta (Backend.addStamps).
 abstract interface class StampCodeService {
   static const dailyScanLimit = 2;
 

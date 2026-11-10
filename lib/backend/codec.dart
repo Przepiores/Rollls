@@ -4,7 +4,7 @@ import '../data/models.dart';
 
 /// Zamiana modeli na mapy Firestore i z powrotem.
 ///
-/// Model danych w bazie (te same nazwy pól w regułach, w Cloud Functions
+/// Model danych w bazie (te same nazwy pól w regułach
 /// i w panelu sklepu):
 ///
 /// * `categories/{id}`: name{pl,en}, note{pl,en}?, color (ARGB int), image?,
@@ -17,7 +17,7 @@ import '../data/models.dart';
 /// * `shop/settings`: name, street, city, mapsQuery, instagram, facebook,
 ///   hours [7 x {open: "11:00", close: "21:30"} albo null], specialHours
 /// * `users/{uid}`: displayName, email, marketingConsent, createdAt,
-///   stamps, rewardsRedeemed (pieczątki zmieniają tylko Cloud Functions)
+///   stamps, rewardsRedeemed (pieczątki zmienia tylko admin, patrz firestore.rules)
 ///
 /// Obrazy to ścieżka do zasobu w aplikacji (`assets/images/...`) albo adres
 /// https, gdy właściciel wgra zdjęcie przez panel.

@@ -1,0 +1,15 @@
+{
+  "name": "ice-rolls-firestore-tests",
+  "private": true,
+  "description": "Testy reguł bazy Ice Rolls na emulatorze Firestore.",
+  "scripts": {
+    "test": "tsc && firebase emulators:exec --only firestore --project demo-icerolls --config ../firebase.json \"node --test lib/*.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@types/node": "^22.0.0",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.35.0",
+    "typescript": "^5.9.3"
+  }
+}

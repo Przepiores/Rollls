@@ -29,7 +29,17 @@ class Session {
   );
 }
 
+/// Klient widziany przez obsługę po zeskanowaniu jego kodu.
+class Customer {
+  const Customer({required this.uid, required this.name, this.email, required this.card});
+  final String uid;
+  final String name;
+  final String? email;
+  final StampCard card;
+}
+
 /// Błąd logowania pokazywany klientowi.
+
 enum AuthError { invalidCredentials, emailInUse, weakPassword, invalidEmail, cancelled, network, unknown }
 
 class AuthException implements Exception {
@@ -54,10 +64,20 @@ abstract interface class Backend {
 
   Stream<Session?> session();
   Stream<StampCard> stampCard(String uid);
-  StampCodeService get stampCodes;
+
+  /// Kody QR, które klient skanuje sam (paragon, naklejka przy ladzie).
+  /// Null z Firebase na planie Spark: bez serwera nie da się bezpiecznie
+  /// sprawdzić kodu, więc pieczątki dopisuje obsługa po zeskanowaniu kodu klienta.
+  StampCodeService? get stampCodes;
 
   /// Treść kodu QR klienta, który obsługa skanuje przy odbiorze nagrody.
   String customerCode(String uid);
+
+  /// Odwrotność [customerCode]: uid klienta albo null, gdy to nie jest kod klienta.
+  String? customerUidFromCode(String raw);
+
+  /// Dla obsługi: profil i karta klienta. Null, gdy konta nie ma.
+  Stream<Customer?> customer(String uid);
 
   Future<void> signInWithEmail(String email, String password);
   Future<void> registerWithEmail({required String name, required String email, required String password});
@@ -104,8 +124,18 @@ class LocalBackend implements Backend {
   @override
   Stream<StampCard> stampCard(String uid) => _card.stream;
 
+  static const _demoCustomerCode = 'icerolls:demo-customer';
+
   @override
-  String customerCode(String uid) => 'icerolls:demo-customer';
+  String customerCode(String uid) => _demoCustomerCode;
+
+  @override
+  String? customerUidFromCode(String raw) => raw.trim() == _demoCustomerCode ? demoUid : null;
+
+  @override
+  Stream<Customer?> customer(String uid) => uid != demoUid
+      ? Stream.value(null)
+      : _card.stream.map((card) => Customer(uid: uid, name: 'Klient demo', email: 'klient@example.com', card: card));
 
   /// Prototyp: każde logowanie daje konto właściciela, żeby dało się obejrzeć panel sklepu.
   void _signInDemo() => _session.value = const Session(uid: demoUid, name: 'Kris', role: 'owner');

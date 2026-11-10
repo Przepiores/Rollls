@@ -50,10 +50,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const _CounterSticker(),
-          const SizedBox(height: 28),
-          const _IssueStampCode(),
-          const SizedBox(height: 28),
+          // Kody do samodzielnego skanowania tylko w prototypie: z Firebase na planie
+          // Spark pieczątki dopisuje obsługa po zeskanowaniu kodu klienta.
+          if (!backend.isRemote) ...[
+            const _CounterSticker(),
+            const SizedBox(height: 28),
+            const _IssueStampCode(),
+            const SizedBox(height: 28),
+          ],
           Text(l.scanCustomer, style: text.titleLarge),
           const SizedBox(height: 10),
           // Z Firebase klienta trzeba naprawdę zeskanować: to zrobi panel sklepu.
@@ -161,7 +165,7 @@ class _IssueStampCodeState extends ConsumerState<_IssueStampCode> {
   }
 
   Future<void> _issue() async {
-    final code = await ref.read(stampCodeServiceProvider).issue(stamps: _count, validFor: _validFor);
+    final code = await ref.read(stampCodeServiceProvider)!.issue(stamps: _count, validFor: _validFor);
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
     setState(() {

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,23 +10,22 @@ import '../data/shop_data.dart' as bundled;
 import '../loyalty/stamp_claims.dart';
 import 'backend.dart';
 import 'codec.dart';
-import 'firebase_config.dart';
 
-/// Dane z Firestore, konta z Firebase Auth, pieczątki przez Cloud Functions.
+/// Dane z Firestore i konta z Firebase Auth, na darmowym planie Spark (bez Cloud Functions).
+///
+/// Bezpieczeństwo trzymają reguły w `firestore.rules`: pieczątki dopisuje tylko
+/// konto z kolekcji `admins` (dokument o id równym e-mailowi, dodany w konsoli).
 class FirebaseBackend implements Backend {
-  FirebaseBackend({FirebaseFirestore? db, FirebaseAuth? auth, FirebaseFunctions? functions})
+  FirebaseBackend({FirebaseFirestore? db, FirebaseAuth? auth})
     : _db = db ?? FirebaseFirestore.instance,
-      _auth = auth ?? FirebaseAuth.instance,
-      _functions = functions ?? FirebaseFunctions.instanceFor(region: FirebaseConfig.functionsRegion) {
-    stampCodes = FunctionsStampCodeService(_functions);
-  }
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
-  final FirebaseFunctions _functions;
 
+  /// Klient nie skanuje sam kodów: bez serwera nie da się ich bezpiecznie sprawdzić.
   @override
-  late final StampCodeService stampCodes;
+  StampCodeService? get stampCodes => null;
 
   @override
   bool get isRemote => true;
@@ -73,46 +71,58 @@ class FirebaseBackend implements Backend {
   Stream<Session?> session() {
     late final StreamController<Session?> out;
     StreamSubscription<User?>? authSub;
-    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? docSub;
-    var generation = 0;
+    final docSubs = <StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>[];
+
+    Future<void> cancelDocs() async {
+      for (final sub in docSubs) {
+        await sub.cancel();
+      }
+      docSubs.clear();
+    }
 
     out = StreamController<Session?>(
       onListen: () {
-        // idTokenChanges, a nie authStateChanges: rola przychodzi w tokenie
-        // i zmienia się po odświeżeniu tokenu, bez ponownego logowania.
-        authSub = _auth.idTokenChanges().listen((user) async {
-          final gen = ++generation;
-          await docSub?.cancel();
-          docSub = null;
+        authSub = _auth.authStateChanges().listen((user) async {
+          await cancelDocs();
           if (user == null) {
             out.add(null);
             return;
           }
+          Map<String, dynamic>? profile;
           String? role;
-          try {
-            final claim = (await user.getIdTokenResult()).claims?['role'];
-            role = claim is String ? claim : null;
-          } catch (_) {
-            // Bez sieci zostaje rola z poprzedniego tokenu albo brak roli.
-          }
-          if (gen != generation) return;
-          Session build(Map<String, dynamic>? d) => Session(
-            uid: user.uid,
-            name: (d?['displayName'] as String?) ?? user.displayName ?? user.email?.split('@').first ?? '',
-            email: user.email,
-            role: role,
-            marketingConsent: d?['marketingConsent'] == true,
+          void emit() => out.add(
+            Session(
+              uid: user.uid,
+              name: (profile?['displayName'] as String?) ?? user.displayName ?? user.email?.split('@').first ?? '',
+              email: user.email,
+              role: role,
+              marketingConsent: profile?['marketingConsent'] == true,
+            ),
           );
-          out.add(build(null));
-          docSub = _db
-              .doc('users/${user.uid}')
-              .snapshots()
-              .listen((s) => out.add(build(s.data())), onError: (Object _) {});
+          emit();
+          docSubs.add(
+            _db.doc('users/${user.uid}').snapshots().listen((s) {
+              profile = s.data();
+              emit();
+            }, onError: (Object _) {}),
+          );
+          // Rola z kolekcji admins. Reguły i tak sprawdzają ją przy każdym zapisie,
+          // tu decyduje tylko o tym, czy pokazać panel sklepu.
+          final email = user.email?.toLowerCase();
+          if (email != null && user.emailVerified) {
+            docSubs.add(
+              _db.doc('admins/$email').snapshots().listen((s) {
+                final r = s.data()?['role'];
+                role = r == 'owner' || r == 'staff' ? r as String : null;
+                emit();
+              }, onError: (Object _) {}),
+            );
+          }
         }, onError: out.addError);
       },
       onCancel: () async {
         await authSub?.cancel();
-        await docSub?.cancel();
+        await cancelDocs();
       },
     );
     return out.stream;
@@ -125,7 +135,24 @@ class FirebaseBackend implements Backend {
   @override
   String customerCode(String uid) => 'IRU1.$uid';
 
-  /// Tworzy profil przy pierwszym logowaniu i sprawdza, czy to konto właściciela.
+  static final _customerCodePattern = RegExp(r'^IRU1\.([A-Za-z0-9]{1,128})$');
+
+  @override
+  String? customerUidFromCode(String raw) => _customerCodePattern.firstMatch(raw.trim())?.group(1);
+
+  @override
+  Stream<Customer?> customer(String uid) => _db.doc('users/$uid').snapshots().map((s) {
+    final d = s.data();
+    if (d == null) return null;
+    return Customer(
+      uid: uid,
+      name: (d['displayName'] as String?) ?? '',
+      email: d['email'] as String?,
+      card: Codec.stampCardFrom(d),
+    );
+  });
+
+  /// Tworzy profil przy pierwszym logowaniu.
   Future<void> _afterSignIn(User user, {String? name}) async {
     final ref = _db.doc('users/${user.uid}');
     try {
@@ -140,13 +167,6 @@ class FirebaseBackend implements Backend {
       }
     } catch (e) {
       debugPrint('Profil użytkownika: $e');
-    }
-    try {
-      // Nadaje rolę owner, jeśli e-mail jest na liście właścicieli w Cloud Functions.
-      final res = await _functions.httpsCallable('claimOwner').call<Map<String, dynamic>>();
-      if (res.data['role'] != null) await user.getIdToken(true);
-    } catch (e) {
-      debugPrint('claimOwner: $e');
     }
   }
 
@@ -207,12 +227,40 @@ class FirebaseBackend implements Backend {
     await _db.doc('users/$uid').update({'marketingConsent': value});
   }
 
-  @override
-  Future<void> addStamps(String uid, int count) =>
-      _functions.httpsCallable('addStamps').call<void>({'uid': uid, 'count': count});
+  /// Zmiana karty klienta razem z wpisem do dziennika, w jednej transakcji.
+  /// Reguły pozwalają na nią tylko adminowi i tylko w granicach karty.
+  Future<void> _updateCard(String uid, String action, StampCard Function(StampCard card) change) async {
+    final me = _auth.currentUser?.uid;
+    final ref = _db.doc('users/$uid');
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw StateError('Nie ma klienta $uid');
+      final before = Codec.stampCardFrom(snap.data());
+      final after = change(before);
+      tx.update(ref, {
+        'stamps': after.stamps,
+        'rewardsRedeemed': after.rewardsRedeemed,
+        'lastStampAt': FieldValue.serverTimestamp(),
+      });
+      tx.set(_db.collection('auditLog').doc(), {
+        'uid': me,
+        'action': action,
+        'path': 'users/$uid',
+        'stampsBefore': before.stamps,
+        'stampsAfter': after.stamps,
+        'at': FieldValue.serverTimestamp(),
+      });
+    });
+  }
 
   @override
-  Future<void> redeemReward(String uid) => _functions.httpsCallable('redeemReward').call<void>({'uid': uid});
+  Future<void> addStamps(String uid, int count) => _updateCard(uid, 'addStamps', (c) => c.addStamps(count));
+
+  @override
+  Future<void> redeemReward(String uid) => _updateCard(uid, 'redeemReward', (c) {
+    if (!c.rewardReady) throw StateError('Karta nie jest pełna');
+    return c.redeem();
+  });
 
   @override
   Future<int> uploadBundledData() async {
@@ -242,39 +290,5 @@ class FirebaseBackend implements Backend {
       'at': FieldValue.serverTimestamp(),
     });
     return count;
-  }
-}
-
-/// Kody na pieczątki podpisuje i sprawdza serwer (Cloud Functions).
-/// Klucz sklepu, zużyte kody i liczniki skanów nigdy nie trafiają do aplikacji.
-class FunctionsStampCodeService implements StampCodeService {
-  FunctionsStampCodeService(this._functions);
-  final FirebaseFunctions _functions;
-
-  Future<Map<String, dynamic>> _call(String name, [Map<String, dynamic>? data]) async {
-    final res = await _functions.httpsCallable(name).call<Map<String, dynamic>>(data);
-    return Map<String, dynamic>.from(res.data);
-  }
-
-  @override
-  Future<String> issue({required int stamps, required Duration validFor}) async =>
-      (await _call('issueStampCode', {'stamps': stamps, 'validForSeconds': validFor.inSeconds}))['code'] as String;
-
-  @override
-  Future<String> issueSticker({required String id, required DateTime validUntil}) async =>
-      (await _call('issueSticker', {'id': id, 'validUntil': validUntil.toUtc().toIso8601String()}))['code'] as String;
-
-  @override
-  Future<int> scansLeftToday(String userId) async => ((await _call('scansLeftToday'))['scansLeftToday'] as num).toInt();
-
-  @override
-  Future<ClaimResult> claim(String raw, {required String userId, required int stampsMissing}) async {
-    final d = await _call('claimStampCode', {'code': raw});
-    final status = ClaimStatus.values.asNameMap()[d['status']] ?? ClaimStatus.invalid;
-    return ClaimResult(
-      status,
-      stamps: (d['stamps'] as num? ?? 0).toInt(),
-      scansLeftToday: (d['scansLeftToday'] as num? ?? 0).toInt(),
-    );
   }
 }
