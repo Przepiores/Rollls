@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/opening_hours.dart';
-import '../data/shop_data.dart';
 import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';
@@ -20,6 +19,8 @@ class MoreScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final session = ref.watch(sessionProvider);
+    final shop = ref.watch(shopProvider);
+    final backend = ref.read(backendProvider);
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final text = Theme.of(context).textTheme;
@@ -137,7 +138,7 @@ class MoreScreen extends ConsumerWidget {
               secondary: const Icon(Icons.notifications_outlined),
               title: Text(l.marketingConsent),
               value: session.marketingConsent,
-              onChanged: ref.read(sessionProvider.notifier).setMarketingConsent,
+              onChanged: backend.setMarketingConsent,
             ),
             if (session.isStaff)
               ListTile(
@@ -147,11 +148,7 @@ class MoreScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/admin'),
               ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: Text(l.logout),
-              onTap: ref.read(sessionProvider.notifier).signOut,
-            ),
+            ListTile(leading: const Icon(Icons.logout), title: Text(l.logout), onTap: backend.signOut),
           ],
         ],
       ),

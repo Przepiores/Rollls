@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'backend/backend.dart';
+import 'data/menu_data.dart' as bundled;
 import 'data/models.dart';
+import 'data/shop_data.dart' as bundled;
 import 'loyalty/stamp_claims.dart';
 
-/// Ustawienia i stan klienta. W prototypie trzymane w pamięci,
-/// w wersji z Firebase przejdą do Firestore i Firebase Auth.
+export 'backend/backend.dart' show Session;
+
+/// Ustawienia i stan klienta. Dane idą z [Backend]: lokalnie w prototypie,
+/// z Firebase, gdy aplikacja ma konfigurację (patrz `main.dart`).
 
 class LocaleNotifier extends Notifier<Locale> {
   @override
@@ -23,47 +28,66 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
 
-class Session {
-  const Session({required this.name, required this.isStaff, this.marketingConsent = false});
-  final String name;
-  final bool isStaff;
-  final bool marketingConsent;
+/// Podmieniany w `main.dart` na `FirebaseBackend`, gdy jest konfiguracja Firebase.
+final backendProvider = Provider<Backend>((ref) => LocalBackend());
 
-  Session copyWith({bool? marketingConsent}) =>
-      Session(name: name, isStaff: isStaff, marketingConsent: marketingConsent ?? this.marketingConsent);
+// Menu, promocje i lokal. Zanim baza odpowie (albo gdy jest pusta lub bez sieci),
+// pokazujemy dane wbudowane w aplikację, żeby ekran nigdy nie był pusty.
+
+final _categoriesStream = StreamProvider<List<MenuCategory>>((ref) => ref.watch(backendProvider).categories());
+final _menuItemsStream = StreamProvider<List<MenuItem>>((ref) => ref.watch(backendProvider).menuItems());
+final _promotionsStream = StreamProvider<List<Promotion>>((ref) => ref.watch(backendProvider).promotions());
+final _shopStream = StreamProvider<Shop>((ref) => ref.watch(backendProvider).shop());
+
+List<T> _orBundled<T>(AsyncValue<List<T>> v, List<T> fallback) {
+  final list = v.value;
+  return list == null || list.isEmpty ? fallback : list;
 }
 
-class SessionNotifier extends Notifier<Session?> {
-  @override
-  Session? build() => null;
+final categoriesProvider = Provider<List<MenuCategory>>(
+  (ref) => _orBundled(ref.watch(_categoriesStream), bundled.categories),
+);
+final menuItemsProvider = Provider<List<MenuItem>>((ref) => _orBundled(ref.watch(_menuItemsStream), bundled.menuItems));
 
-  /// Prototyp: każde logowanie daje konto właściciela, żeby dało się obejrzeć panel sklepu.
-  void signInDemo() => state = const Session(name: 'Kris', isStaff: true);
-  void signOut() => state = null;
-  void setMarketingConsent(bool value) => state = state?.copyWith(marketingConsent: value);
-}
+/// Promocje mogą być celowo puste (wszystkie wyłączone), więc gdy baza ma już
+/// menu, pusta lista promocji zostaje pusta.
+/// Wyjątek: dopóki baza jest jeszcze pusta (menu nie zostało wgrane z panelu),
+/// pokazujemy promocje wbudowane, żeby klient nie widział pustego ekranu.
+final promotionsProvider = Provider<List<Promotion>>((ref) {
+  final fromDb = ref.watch(_promotionsStream).value;
+  final dbCategories = ref.watch(_categoriesStream).value;
+  final dbSeeded = dbCategories != null && dbCategories.isNotEmpty;
+  if (fromDb == null || (fromDb.isEmpty && !dbSeeded)) return bundled.promotions;
+  return fromDb;
+});
+final shopProvider = Provider<Shop>((ref) => ref.watch(_shopStream).value ?? bundled.shop);
 
-final sessionProvider = NotifierProvider<SessionNotifier, Session?>(SessionNotifier.new);
+final _sessionStream = StreamProvider<Session?>((ref) => ref.watch(backendProvider).session());
 
-class StampCardNotifier extends Notifier<StampCard> {
-  @override
-  StampCard build() => const StampCard(stamps: 7, rewardsRedeemed: 1);
-  void add(int count) => state = state.addStamps(count);
-  void redeem() => state = state.redeem();
-}
+/// Zalogowany użytkownik albo null.
+final sessionProvider = Provider<Session?>((ref) => ref.watch(_sessionStream).value);
 
-final stampCardProvider = NotifierProvider<StampCardNotifier, StampCard>(StampCardNotifier.new);
+final _stampCardStream = StreamProvider<StampCard>((ref) {
+  final uid = ref.watch(sessionProvider.select((s) => s?.uid));
+  if (uid == null) return Stream.value(const StampCard());
+  return ref.watch(backendProvider).stampCard(uid);
+});
 
-final stampCodeServiceProvider = Provider<StampCodeService>((ref) => LocalStampCodeService());
+/// Karta pieczątek zalogowanego klienta.
+final stampCardProvider = Provider<StampCard>((ref) => ref.watch(_stampCardStream).value ?? const StampCard());
+
+/// Null, gdy klient nie skanuje kodów sam (Firebase na planie Spark).
+final stampCodeServiceProvider = Provider<StampCodeService?>((ref) => ref.watch(backendProvider).stampCodes);
 
 /// Ile skanów kodu zostało dziś zalogowanemu klientowi.
 final scansLeftTodayProvider = FutureProvider<int>((ref) async {
-  final session = ref.watch(sessionProvider);
-  if (session == null) return StampCodeService.dailyScanLimit;
-  return ref.watch(stampCodeServiceProvider).scansLeftToday(session.name);
+  final uid = ref.watch(sessionProvider.select((s) => s?.uid));
+  final service = ref.watch(stampCodeServiceProvider);
+  if (uid == null || service == null) return StampCodeService.dailyScanLimit;
+  return service.scansLeftToday(uid);
 });
 
 /// Kod z naklejki przy ladzie. Prototyp: jedna naklejka ważna do końca 2027 r.
 final counterStickerProvider = FutureProvider<String>(
-  (ref) => ref.watch(stampCodeServiceProvider).issueSticker(id: 'lada-1', validUntil: DateTime.utc(2028)),
+  (ref) => ref.watch(stampCodeServiceProvider)!.issueSticker(id: 'lada-1', validUntil: DateTime.utc(2028)),
 );

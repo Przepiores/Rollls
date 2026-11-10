@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../data/models.dart';
 import '../data/opening_hours.dart';
-import '../data/menu_data.dart';
-import '../data/shop_data.dart';
 import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';
@@ -25,7 +23,11 @@ class HomeScreen extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
     final session = ref.watch(sessionProvider);
     final card = ref.watch(stampCardProvider);
-    final news = menuItems.where((i) => i.badges.contains(MenuBadge.isNew)).toList();
+    final categories = ref.watch(categoriesProvider);
+    final promotions = ref.watch(promotionsProvider);
+    Color colorOf(MenuItem item) =>
+        categories.where((c) => c.id == item.categoryId).firstOrNull?.color ?? RollColors.pink;
+    final news = ref.watch(menuItemsProvider).where((i) => i.badges.contains(MenuBadge.isNew)).toList();
     final text = Theme.of(context).textTheme;
 
     return ListView(
@@ -86,18 +88,14 @@ class HomeScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
             child: Card(
-              color: tint(context, categories.firstWhere((c) => c.id == item.categoryId).color),
-              shape: outlinedCard(categories.firstWhere((c) => c.id == item.categoryId).color),
+              color: tint(context, colorOf(item)),
+              shape: outlinedCard(colorOf(item)),
               clipBehavior: Clip.antiAlias,
               child: ListTile(
                 contentPadding: const EdgeInsets.all(10),
                 leading: SizedBox.square(
                   dimension: 56,
-                  child: ProductImage(
-                    item: item,
-                    color: categories.firstWhere((c) => c.id == item.categoryId).color,
-                    radius: 12,
-                  ),
+                  child: ProductImage(item: item, color: colorOf(item), radius: 12),
                 ),
                 title: Text(item.name.of(locale), style: text.titleMedium),
                 subtitle: Text(item.priceLabel),
@@ -224,14 +222,14 @@ class _GlassHero extends StatelessWidget {
   }
 }
 
-class OpenStatusPill extends StatelessWidget {
+class OpenStatusPill extends ConsumerWidget {
   const OpenStatusPill({super.key, this.alignment = Alignment.centerLeft});
   final Alignment alignment;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final status = openStatus(shop.hours, DateTime.now());
+    final status = openStatus(ref.watch(shopProvider).hours, DateTime.now());
     final (label, color) = switch (status) {
       OpenNow(:final closesAt) => (l.openUntil(formatTime(closesAt)), RollColors.lime),
       ClosedNow(:final opensAt, :final daysAhead) => (
@@ -297,7 +295,7 @@ class _PromoCard extends StatelessWidget {
           if (promo.image == null)
             Positioned(right: -18, bottom: -18, child: Swirl(color: Colors.white.withValues(alpha: 0.7), size: 90))
           else ...[
-            Positioned.fill(child: Image.asset(promo.image!, fit: BoxFit.cover)),
+            Positioned.fill(child: BrandImage(promo.image!, fit: BoxFit.cover)),
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
