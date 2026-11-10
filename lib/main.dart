@@ -14,9 +14,15 @@ Future<void> main() async {
   // Load brand fonts before the first frame, so chips are not measured with a fallback font.
   GoogleFonts.fredoka(fontWeight: FontWeight.w600);
   GoogleFonts.nunito(fontWeight: FontWeight.w700);
-  await GoogleFonts.pendingFonts().catchError((_) => const <void>[]);
+  // Bez sieci albo przy zablokowanym serwerze czcionek nie czekamy w nieskończoność.
+  await GoogleFonts.pendingFonts()
+      .timeout(const Duration(seconds: 5))
+      .catchError((_) => const <void>[]);
 
-  final overrides = [if (await _initFirebase()) backendProvider.overrideWithValue(FirebaseBackend())];
+  final overrides = [
+    if (await _initFirebase())
+      backendProvider.overrideWithValue(FirebaseBackend()),
+  ];
   runApp(ProviderScope(overrides: overrides, child: const IceRollsApp()));
 }
 
@@ -25,9 +31,15 @@ Future<void> main() async {
 Future<bool> _initFirebase() async {
   if (!FirebaseConfig.isConfigured) return false;
   try {
-    await Firebase.initializeApp(options: FirebaseConfig.currentOptions);
+    // Na webie Firebase dociąga skrypty z www.gstatic.com. Gdy są zablokowane
+    // (np. przez bloker reklam), inicjalizacja nigdy się nie kończy, a ekran
+    // zostawał biały. Po limicie czasu przechodzimy na dane wbudowane.
+    await Firebase.initializeApp(options: FirebaseConfig.currentOptions)
+        .timeout(const Duration(seconds: 12));
     // Menu i karta pieczątek działają też bez sieci, z pamięci podręcznej.
-    FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+    );
     return true;
   } catch (e) {
     debugPrint('Firebase: $e');
