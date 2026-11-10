@@ -49,9 +49,17 @@ final categoriesProvider = Provider<List<MenuCategory>>(
 );
 final menuItemsProvider = Provider<List<MenuItem>>((ref) => _orBundled(ref.watch(_menuItemsStream), bundled.menuItems));
 
-/// Promocje mogą być celowo puste (wszystkie wyłączone), więc tu nie ma
-/// zastępstwa, gdy baza odpowiedziała pustą listą.
-final promotionsProvider = Provider<List<Promotion>>((ref) => ref.watch(_promotionsStream).value ?? bundled.promotions);
+/// Promocje mogą być celowo puste (wszystkie wyłączone), więc gdy baza ma już
+/// menu, pusta lista promocji zostaje pusta.
+/// Wyjątek: dopóki baza jest jeszcze pusta (menu nie zostało wgrane z panelu),
+/// pokazujemy promocje wbudowane, żeby klient nie widział pustego ekranu.
+final promotionsProvider = Provider<List<Promotion>>((ref) {
+  final fromDb = ref.watch(_promotionsStream).value;
+  final dbCategories = ref.watch(_categoriesStream).value;
+  final dbSeeded = dbCategories != null && dbCategories.isNotEmpty;
+  if (fromDb == null || (fromDb.isEmpty && !dbSeeded)) return bundled.promotions;
+  return fromDb;
+});
 final shopProvider = Provider<Shop>((ref) => ref.watch(_shopStream).value ?? bundled.shop);
 
 final _sessionStream = StreamProvider<Session?>((ref) => ref.watch(backendProvider).session());
