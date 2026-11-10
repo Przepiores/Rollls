@@ -36,7 +36,7 @@ const categories = [
   MenuCategory(
     id: 'classic',
     image: 'assets/images/classic_shake.jpg',
-    imageAlignment: Alignment(0, -0.6),
+    imageAlignment: Alignment(0, 0.3),
     name: L('Classic Shake', 'Classic Shake'),
     color: RollColors.sky,
     note: L(
