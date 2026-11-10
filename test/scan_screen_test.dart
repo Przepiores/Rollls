@@ -19,7 +19,7 @@ void main() {
     addTearDown(container.dispose);
     container.listen(stampCardProvider, (_, _) {});
     await container.read(backendProvider).signInWithGoogle();
-    final service = container.read(stampCodeServiceProvider);
+    final service = container.read(stampCodeServiceProvider)!;
     late void Function(String) scan;
 
     await tester.pumpWidget(

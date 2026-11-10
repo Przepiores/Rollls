@@ -40,7 +40,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     final backend = ref.read(backendProvider);
     ClaimResult result;
     try {
-      result = await ref.read(stampCodeServiceProvider).claim(raw, userId: session.uid, stampsMissing: card.remaining);
+      result = await ref.read(stampCodeServiceProvider)!.claim(raw, userId: session.uid, stampsMissing: card.remaining);
     } catch (e) {
       // Brak sieci albo błąd serwera: kod nie został zużyty, można spróbować ponownie.
       result = const ClaimResult(ClaimStatus.invalid);

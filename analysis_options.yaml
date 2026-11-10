@@ -15,7 +15,7 @@ analyzer:
     - android/**
     - ios/**
     - web/**
-    - functions/**
+    - firestore-tests/**
 
 linter:
   # The lint rules applied to this project can be customized in the

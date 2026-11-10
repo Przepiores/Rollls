@@ -1,17 +1,16 @@
-name: Firebase (reguły i Cloud Functions)
+name: Firebase (reguły bazy)
 
-# Wdraża reguły bazy i Cloud Functions po zmianach na main.
-# Potrzebne sekrety repozytorium (Settings → Secrets and variables → Actions):
-#   FIREBASE_SERVICE_ACCOUNT  – klucz JSON konta usługi z konsoli Firebase
-#   OWNER_EMAILS              – e-mail(e) właściciela, oddzielone przecinkami
-# Bez sekretów workflow tylko testuje i niczego nie wdraża.
+# Testuje reguły Firestore na emulatorze, a na main wdraża je do projektu.
+# Potrzebny sekret repozytorium (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT – klucz JSON konta usługi z konsoli Firebase
+# Bez sekretu workflow tylko testuje i niczego nie wdraża.
 
 on:
   push:
     branches: [main]
-    paths: ['functions/**', 'firestore.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', '.github/workflows/firebase.yml']
+    paths: ['firestore.rules', 'firestore.indexes.json', 'firebase.json', 'firestore-tests/**', '.github/workflows/firebase.yml']
   pull_request:
-    paths: ['functions/**', 'firestore.rules', 'firestore.indexes.json', 'firebase.json']
+    paths: ['firestore.rules', 'firestore.indexes.json', 'firebase.json', 'firestore-tests/**', '.github/workflows/firebase.yml']
   workflow_dispatch:
 
 concurrency:
@@ -27,18 +26,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: firestore-tests/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
       - run: npm ci
-        working-directory: functions
+        working-directory: firestore-tests
       - run: npm test
-        working-directory: functions
-      # Reguły bazy i funkcje na emulatorach Firebase.
-      - run: npm run test:emulator
-        working-directory: functions
+        working-directory: firestore-tests
 
   deploy:
     needs: test
@@ -50,8 +46,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: functions/package-lock.json
-      - name: Sprawdź sekrety
+          cache-dependency-path: firestore-tests/package-lock.json
+      - name: Sprawdź sekret
         id: secrets
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -64,17 +60,15 @@ jobs:
           fi
       - if: steps.secrets.outputs.ready == 'true'
         run: npm ci
-        working-directory: functions
+        working-directory: firestore-tests
       - if: steps.secrets.outputs.ready == 'true'
-        name: Wdróż
+        name: Wdróż reguły
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          OWNER_EMAILS: ${{ secrets.OWNER_EMAILS }}
         run: |
           echo "$SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           PROJECT=$(node -p "JSON.parse(process.argv[1]).project_id" "$SA")
-          printf 'OWNER_EMAILS=%s\n' "$OWNER_EMAILS" > functions/.env
-          npx --prefix functions firebase deploy --project "$PROJECT" \
-            --only firestore:rules,firestore:indexes,functions --non-interactive --force
-          rm -f "$RUNNER_TEMP/sa.json" functions/.env
+          npx --prefix firestore-tests firebase deploy --project "$PROJECT" \
+            --only firestore:rules,firestore:indexes --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

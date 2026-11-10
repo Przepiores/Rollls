@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../backend/backend.dart';
 import '../../l10n/app_localizations.dart';
+import '../../loyalty/stamp_code.dart';
 import '../../state.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
@@ -200,6 +201,8 @@ class _CustomerCard extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final card = customer.card;
+    // Reguły bazy przyjmują 1–5 pieczątek naraz i najwyżej do pełnej karty.
+    final maxCount = card.remaining < StampCode.maxStamps ? card.remaining : StampCode.maxStamps;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -231,7 +234,7 @@ class _CustomerCard extends StatelessWidget {
                 child: Text('$count', textAlign: TextAlign.center, style: text.headlineSmall),
               ),
               IconButton.outlined(
-                onPressed: count < card.remaining ? () => onCount(count + 1) : null,
+                onPressed: count < maxCount ? () => onCount(count + 1) : null,
                 icon: const Icon(Icons.add),
               ),
               const SizedBox(width: 12),

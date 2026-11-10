@@ -59,17 +59,20 @@ class _Card extends ConsumerWidget {
           textAlign: TextAlign.center,
         ),
         Text(l.stampsProgress(card.stamps, 10), textAlign: TextAlign.center, style: text.bodyMedium),
-        const SizedBox(height: 18),
-        FilledButton.icon(
-          onPressed: () => context.push('/scan'),
-          icon: const Icon(Icons.qr_code_scanner),
-          label: Text(l.scanStampCode),
-        ),
-        if (ref.watch(scansLeftTodayProvider).value case final left?)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(l.scansLeftToday(left), textAlign: TextAlign.center, style: text.bodySmall),
+        // Z Firebase na planie Spark klient nie skanuje kodów sam, tylko pokazuje swój kod przy ladzie.
+        if (ref.watch(stampCodeServiceProvider) != null) ...[
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: () => context.push('/scan'),
+            icon: const Icon(Icons.qr_code_scanner),
+            label: Text(l.scanStampCode),
           ),
+          if (ref.watch(scansLeftTodayProvider).value case final left?)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(l.scansLeftToday(left), textAlign: TextAlign.center, style: text.bodySmall),
+            ),
+        ],
         const SizedBox(height: 22),
         Center(
           child: Container(

@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/admin/admin_screen.dart';
 import 'screens/admin/customer_screen.dart';
-import 'screens/admin/stamp_code_screen.dart';
-import 'screens/admin/sticker_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/menu_screen.dart';
@@ -46,9 +44,10 @@ GoRouter _buildRouter() => GoRouter(
       path: '/admin',
       builder: (_, _) => const AdminScreen(),
       routes: [
-        GoRoute(path: 'code', builder: (_, _) => const StaffOnly(child: StampCodeScreen())),
-        GoRoute(path: 'customer', builder: (_, _) => const StaffOnly(child: CustomerScreen())),
-        GoRoute(path: 'sticker', builder: (_, _) => const StaffOnly(child: StickerScreen())),
+        GoRoute(
+          path: 'customer',
+          builder: (_, _) => const StaffOnly(child: CustomerScreen()),
+        ),
       ],
     ),
     GoRoute(path: '/scan', builder: (_, _) => const ScanScreen()),

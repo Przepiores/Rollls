@@ -36,25 +36,11 @@ class AdminScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(20),
           children: [
             AdminActionTile(
-              icon: Icons.qr_code_2,
-              color: RollColors.lime,
-              title: l.adminIssueStamps,
-              subtitle: l.adminIssueStampsHint,
-              onTap: () => context.push('/admin/code'),
-            ),
-            AdminActionTile(
               icon: Icons.qr_code_scanner,
               color: RollColors.sky,
               title: l.adminCustomer,
               subtitle: l.adminCustomerHint,
               onTap: () => context.push('/admin/customer'),
-            ),
-            AdminActionTile(
-              icon: Icons.sticky_note_2_outlined,
-              color: RollColors.pink,
-              title: l.counterSticker,
-              subtitle: l.adminStickerHint,
-              onTap: () => context.push('/admin/sticker'),
             ),
             if (backend.isRemote && isOwner) ...[const SizedBox(height: 20), const _UploadBundledData()],
             const SizedBox(height: 28),
