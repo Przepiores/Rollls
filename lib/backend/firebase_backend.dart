@@ -125,6 +125,64 @@ class FirebaseBackend implements Backend {
   @override
   String customerCode(String uid) => 'IRU1.$uid';
 
+  static final _customerCodePattern = RegExp(r'^IRU1\.([A-Za-z0-9]{1,128})$');
+
+  /// uid z kodu `IRU1.<uid>`. Ten sam wzorzec sprawdza funkcja serwera (uidArg).
+  static String? uidFromCustomerCode(String raw) => _customerCodePattern.firstMatch(raw.trim())?.group(1);
+
+  @override
+  String? customerUidFromCode(String raw) => uidFromCustomerCode(raw);
+
+  @override
+  Stream<Customer?> customer(String uid) => _db.doc('users/$uid').snapshots().map((s) {
+    final d = s.data();
+    if (d == null) return null;
+    return Customer(
+      uid: uid,
+      name: (d['displayName'] as String?) ?? '',
+      email: d['email'] as String?,
+      card: Codec.stampCardFrom(d),
+    );
+  });
+
+  @override
+  Stream<List<StickerInfo>> stickers() => _db.collection('stickers').snapshots().map((snap) {
+    DateTime? time(Object? raw) => raw is Timestamp ? raw.toDate() : null;
+    final list = [
+      for (final d in snap.docs)
+        if (time(d.data()['validUntil']) case final validUntil?)
+          StickerInfo(
+            id: d.id,
+            validUntil: validUntil,
+            revoked: d.data()['revoked'] == true,
+            createdAt: time(d.data()['createdAt']),
+          ),
+    ];
+    final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+    return list..sort((a, b) => (b.createdAt ?? epoch).compareTo(a.createdAt ?? epoch));
+  });
+
+  @override
+  Future<void> createSticker(String id, DateTime validUntil) async {
+    // Funkcja zakłada dokument naklejki i zapisuje wpis w historii zmian.
+    await stampCodes.issueSticker(id: id, validUntil: validUntil);
+  }
+
+  @override
+  Future<void> revokeSticker(String id) async {
+    final uid = _auth.currentUser?.uid;
+    final batch = _db.batch()..update(_db.doc('stickers/$id'), {'revoked': true});
+    if (uid != null) {
+      batch.set(_db.collection('auditLog').doc(), {
+        'uid': uid,
+        'action': 'revokeSticker',
+        'path': 'stickers/$id',
+        'at': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
   /// Tworzy profil przy pierwszym logowaniu i sprawdza, czy to konto właściciela.
   Future<void> _afterSignIn(User user, {String? name}) async {
     final ref = _db.doc('users/${user.uid}');

@@ -44,8 +44,10 @@ void main() {
     await tester.tap(find.text('Panel sklepu'));
     await tester.pumpAndSettle();
     expect(find.text('Naklejka na ladę'), findsOneWidget);
-    await scrollTo(tester, 'Symuluj skan (prototyp)');
-    await tester.tap(find.text('Symuluj skan (prototyp)'));
+    await tester.tap(find.text('Karta klienta'));
+    await tester.pumpAndSettle();
+    await scrollTo(tester, 'Demo: zeskanuj klienta');
+    await tester.tap(find.text('Demo: zeskanuj klienta'));
     await tester.pumpAndSettle();
     await scrollTo(tester, 'Dodaj pieczątki');
     await tester.tap(find.text('Dodaj pieczątki'));

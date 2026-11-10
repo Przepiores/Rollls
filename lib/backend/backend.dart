@@ -29,6 +29,26 @@ class Session {
   );
 }
 
+/// Klient widziany przez obsługę po zeskanowaniu jego kodu.
+class Customer {
+  const Customer({required this.uid, required this.name, this.email, required this.card});
+  final String uid;
+  final String name;
+  final String? email;
+  final StampCard card;
+}
+
+/// Naklejka z kodem QR przy ladzie.
+class StickerInfo {
+  const StickerInfo({required this.id, required this.validUntil, this.revoked = false, this.createdAt});
+  final String id;
+  final DateTime validUntil;
+  final bool revoked;
+  final DateTime? createdAt;
+
+  bool get active => !revoked && validUntil.isAfter(DateTime.now());
+}
+
 /// Błąd logowania pokazywany klientowi.
 enum AuthError { invalidCredentials, emailInUse, weakPassword, invalidEmail, cancelled, network, unknown }
 
@@ -59,6 +79,19 @@ abstract interface class Backend {
   /// Treść kodu QR klienta, który obsługa skanuje przy odbiorze nagrody.
   String customerCode(String uid);
 
+  /// Odwrotność [customerCode]: uid klienta albo null, gdy to nie jest kod klienta.
+  String? customerUidFromCode(String raw);
+
+  /// Dla obsługi: profil i karta klienta. Null, gdy konta nie ma.
+  Stream<Customer?> customer(String uid);
+
+  /// Dla obsługi: naklejki przy ladzie, najnowsze pierwsze.
+  Stream<List<StickerInfo>> stickers();
+
+  /// Dla właściciela: nowa naklejka i unieważnienie starej.
+  Future<void> createSticker(String id, DateTime validUntil);
+  Future<void> revokeSticker(String id);
+
   Future<void> signInWithEmail(String email, String password);
   Future<void> registerWithEmail({required String name, required String email, required String password});
   Future<void> sendPasswordReset(String email);
@@ -86,6 +119,11 @@ class LocalBackend implements Backend {
 
   final _session = _Value<Session?>(null);
   final _card = _Value(const StampCard(stamps: 7, rewardsRedeemed: 1));
+  final _stickers = _Value([
+    StickerInfo(id: 'lada-1', validUntil: DateTime.utc(2028), createdAt: DateTime.utc(2026, 11)),
+  ]);
+
+  static const _demoCustomerCode = 'icerolls:demo-customer';
 
   @override
   bool get isRemote => false;
@@ -105,7 +143,28 @@ class LocalBackend implements Backend {
   Stream<StampCard> stampCard(String uid) => _card.stream;
 
   @override
-  String customerCode(String uid) => 'icerolls:demo-customer';
+  String customerCode(String uid) => _demoCustomerCode;
+
+  @override
+  String? customerUidFromCode(String raw) => raw.trim() == _demoCustomerCode ? demoUid : null;
+
+  @override
+  Stream<Customer?> customer(String uid) => uid != demoUid
+      ? Stream.value(null)
+      : _card.stream.map((card) => Customer(uid: uid, name: 'Klient demo', email: 'klient@example.com', card: card));
+
+  @override
+  Stream<List<StickerInfo>> stickers() => _stickers.stream;
+
+  @override
+  Future<void> createSticker(String id, DateTime validUntil) async =>
+      _stickers.value = [StickerInfo(id: id, validUntil: validUntil, createdAt: DateTime.now()), ..._stickers.value];
+
+  @override
+  Future<void> revokeSticker(String id) async => _stickers.value = [
+    for (final s in _stickers.value)
+      s.id == id ? StickerInfo(id: s.id, validUntil: s.validUntil, revoked: true, createdAt: s.createdAt) : s,
+  ];
 
   /// Prototyp: każde logowanie daje konto właściciela, żeby dało się obejrzeć panel sklepu.
   void _signInDemo() => _session.value = const Session(uid: demoUid, name: 'Kris', role: 'owner');
