@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// Reguły bazy Ice Rolls. Model danych opisuje lib/backend/codec.dart.
+//
+// Role są w custom claims tokenu (request.auth.token.role): "owner" albo "staff".
+// Nadają je tylko Cloud Functions (claimOwner, setRole), klient nie może ich zmienić.
+// Cloud Functions używają Admin SDK i omijają te reguły.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function role() { return signedIn() ? request.auth.token.get('role', '') : ''; }
+    function isOwner() { return role() == 'owner'; }
+    function isStaff() { return role() == 'owner' || role() == 'staff'; }
+
+    function isText(v) { return v is map && v.pl is string && v.pl.size() <= 2000; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // Menu, promocje i dane lokalu czyta każdy, także bez logowania (PWA, ekran startowy).
+    // Edytuje właściciel. Obsługa może tylko wyłączyć pozycję, np. gdy skończy się składnik.
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /menuItems/{id} {
+      allow read: if true;
+      allow create, update: if isOwner()
+        && request.resource.data.categoryId is string
+        && isText(request.resource.data.name)
+        && request.resource.data.prices is list;
+      allow update: if isStaff() && changed().hasOnly(['active']) && request.resource.data.active is bool;
+      allow delete: if isOwner();
+    }
+
+    match /promotions/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /shop/{doc} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Naklejki z kodem przy ladzie. Wydaje je funkcja issueSticker,
+    // właściciel może tylko unieważnić naklejkę.
+    match /stickers/{id} {
+      allow read: if isStaff();
+      allow update: if isOwner() && changed().hasOnly(['revoked']) && request.resource.data.revoked is bool;
+    }
+
+    // Dziennik zmian z panelu sklepu: wpis może dodać obsługa, czyta właściciel, nikt nie zmienia.
+    match /auditLog/{id} {
+      allow read: if isOwner();
+      allow create: if isStaff()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at == request.time;
+    }
+
+    // Profil klienta. Pieczątki (stamps, rewardsRedeemed) zmieniają tylko Cloud Functions.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['displayName', 'email', 'marketingConsent', 'createdAt'])
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
+        && request.resource.data.marketingConsent is bool
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && changed().hasOnly(['displayName', 'marketingConsent'])
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
+        && request.resource.data.marketingConsent is bool;
+    }
+
+    // Wszystko inne (klucz do podpisu kodów, zużyte kody, liczniki skanów) tylko dla serwera.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

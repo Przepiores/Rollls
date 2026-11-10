@@ -6,6 +6,28 @@ import '../theme.dart';
 import 'checker.dart';
 import 'swirl.dart';
 
+/// Zdjęcie z zasobów aplikacji (`assets/...`) albo z internetu (https),
+/// gdy właściciel wgra je przez panel sklepu.
+class BrandImage extends StatelessWidget {
+  const BrandImage(this.source, {super.key, this.fit, this.alignment = Alignment.center});
+  final String source;
+  final BoxFit? fit;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    if (source.startsWith('https://')) {
+      return Image.network(
+        source,
+        fit: fit,
+        alignment: alignment,
+        errorBuilder: (_, _, _) => const ColoredBox(color: Color(0x22000000)),
+      );
+    }
+    return Image.asset(source, fit: fit, alignment: alignment);
+  }
+}
+
 class BadgeChip extends StatelessWidget {
   const BadgeChip(this.badge, {super.key});
   final MenuBadge badge;
@@ -40,7 +62,7 @@ class ProductImage extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: item.image != null
-          ? Image.asset(item.image!, fit: BoxFit.cover)
+          ? BrandImage(item.image!, fit: BoxFit.cover)
           : ColoredBox(
               color: color.withValues(alpha: 0.18),
               child: LayoutBuilder(

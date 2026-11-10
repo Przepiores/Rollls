@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ice_rolls/backend/backend.dart';
 import 'package:ice_rolls/l10n/app_localizations.dart';
 import 'package:ice_rolls/screens/scan_screen.dart';
 import 'package:ice_rolls/state.dart';
@@ -16,7 +17,8 @@ void main() {
 
     final container = ProviderContainer();
     addTearDown(container.dispose);
-    container.read(sessionProvider.notifier).signInDemo();
+    container.listen(stampCardProvider, (_, _) {});
+    await container.read(backendProvider).signInWithGoogle();
     final service = container.read(stampCodeServiceProvider);
     late void Function(String) scan;
 
@@ -68,7 +70,7 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
-    container.read(stampCardProvider.notifier).redeem();
+    await container.read(backendProvider).redeemReward(LocalBackend.demoUid);
     await open();
     expect(find.text('Na dziś wykorzystano wszystkie skany'), findsOneWidget);
     scan('IR1.zly.1.0.kod');

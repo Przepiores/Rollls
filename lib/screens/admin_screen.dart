@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../backend/backend.dart';
 import '../l10n/app_localizations.dart';
 import '../loyalty/stamp_claims.dart';
 import '../loyalty/stamp_code.dart';
@@ -32,7 +33,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final card = ref.watch(stampCardProvider);
-    final notifier = ref.read(stampCardProvider.notifier);
+    final backend = ref.read(backendProvider);
+    final session = ref.watch(sessionProvider);
     final text = Theme.of(context).textTheme;
 
     final tools = [
@@ -54,7 +56,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           const SizedBox(height: 28),
           Text(l.scanCustomer, style: text.titleLarge),
           const SizedBox(height: 10),
-          if (!_scanned)
+          // Z Firebase klienta trzeba naprawdę zeskanować: to zrobi panel sklepu.
+          if (backend.isRemote)
+            Text(l.customerScanLater, style: text.bodyMedium)
+          else if (!_scanned)
             Container(
               height: 180,
               decoration: BoxDecoration(
@@ -75,8 +80,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             if (card.rewardReady)
               FilledButton.icon(
                 style: FilledButton.styleFrom(backgroundColor: RollColors.lime, foregroundColor: ink),
-                onPressed: () {
-                  notifier.redeem();
+                onPressed: () async {
+                  await backend.redeemReward(LocalBackend.demoUid);
                   _toast(l.rewardRedeemed);
                 },
                 icon: const Icon(Icons.icecream),
@@ -100,8 +105,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
-                        notifier.add(_count);
+                      onPressed: () async {
+                        await backend.addStamps(LocalBackend.demoUid, _count);
                         _toast(l.stampsAdded(_count));
                         setState(() => _count = 1);
                       },
@@ -110,6 +115,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   ),
                 ],
               ),
+          ],
+          if (backend.isRemote && (session?.isOwner ?? false)) ...[
+            const SizedBox(height: 28),
+            const _UploadBundledData(),
           ],
           const SizedBox(height: 28),
           for (final (i, (icon, label)) in tools.indexed)
@@ -253,6 +262,53 @@ class _CounterSticker extends ConsumerWidget {
               child: QrImageView(data: code, size: 200, backgroundColor: Colors.white),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Dla właściciela: pierwsze wgranie menu z aplikacji do pustej bazy.
+class _UploadBundledData extends ConsumerStatefulWidget {
+  const _UploadBundledData();
+
+  @override
+  ConsumerState<_UploadBundledData> createState() => _UploadBundledDataState();
+}
+
+class _UploadBundledDataState extends ConsumerState<_UploadBundledData> {
+  var _busy = false;
+
+  Future<void> _upload() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      final count = await ref.read(backendProvider).uploadBundledData();
+      messenger.showSnackBar(SnackBar(content: Text(l.uploadMenuDone(count))));
+    } catch (e) {
+      debugPrint('uploadBundledData: $e');
+      messenger.showSnackBar(SnackBar(content: Text(l.actionFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l.uploadMenuTitle, style: text.titleLarge),
+        const SizedBox(height: 4),
+        Text(l.uploadMenuHint, style: text.bodyMedium),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _upload,
+          icon: const Icon(Icons.cloud_upload_outlined),
+          label: Text(l.uploadMenuButton),
+        ),
       ],
     );
   }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models.dart';
-import '../data/menu_data.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -15,14 +14,16 @@ class MenuScreen extends ConsumerStatefulWidget {
 }
 
 class _MenuScreenState extends ConsumerState<MenuScreen> {
-  String _category = categories.first.id;
+  String? _category;
   String? _expanded;
 
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
-    final cat = categories.firstWhere((c) => c.id == _category);
-    final items = menuItems.where((i) => i.categoryId == _category).toList();
+    final categories = ref.watch(categoriesProvider);
+    // Kategoria mogła zniknąć z bazy, wtedy wracamy do pierwszej.
+    final cat = categories.firstWhere((c) => c.id == _category, orElse: () => categories.first);
+    final items = ref.watch(menuItemsProvider).where((i) => i.categoryId == cat.id).toList();
 
     return Scaffold(
       body: Column(
@@ -36,7 +37,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
                 final c = categories[i];
-                final selected = c.id == _category;
+                final selected = c.id == cat.id;
                 return ChoiceChip(
                   label: Text(c.name.of(locale)),
                   selected: selected,
@@ -120,7 +121,7 @@ class _CategoryBanner extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(category.image!, fit: BoxFit.cover, alignment: category.imageAlignment),
+          BrandImage(category.image!, fit: BoxFit.cover, alignment: category.imageAlignment),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(

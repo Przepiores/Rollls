@@ -1,0 +1,80 @@
+name: Firebase (reguły i Cloud Functions)
+
+# Wdraża reguły bazy i Cloud Functions po zmianach na main.
+# Potrzebne sekrety repozytorium (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT  – klucz JSON konta usługi z konsoli Firebase
+#   OWNER_EMAILS              – e-mail(e) właściciela, oddzielone przecinkami
+# Bez sekretów workflow tylko testuje i niczego nie wdraża.
+
+on:
+  push:
+    branches: [main]
+    paths: ['functions/**', 'firestore.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', '.github/workflows/firebase.yml']
+  pull_request:
+    paths: ['functions/**', 'firestore.rules', 'firestore.indexes.json', 'firebase.json']
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+        working-directory: functions
+      - run: npm test
+        working-directory: functions
+      # Reguły bazy i funkcje na emulatorach Firebase.
+      - run: npm run test:emulator
+        working-directory: functions
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Sprawdź sekrety
+        id: secrets
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "Brak sekretu FIREBASE_SERVICE_ACCOUNT, pomijam wdrożenie."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.secrets.outputs.ready == 'true'
+        run: npm ci
+        working-directory: functions
+      - if: steps.secrets.outputs.ready == 'true'
+        name: Wdróż
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          OWNER_EMAILS: ${{ secrets.OWNER_EMAILS }}
+        run: |
+          echo "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          PROJECT=$(node -p "JSON.parse(process.argv[1]).project_id" "$SA")
+          printf 'OWNER_EMAILS=%s\n' "$OWNER_EMAILS" > functions/.env
+          npx --prefix functions firebase deploy --project "$PROJECT" \
+            --only firestore:rules,firestore:indexes,functions --non-interactive --force
+          rm -f "$RUNNER_TEMP/sa.json" functions/.env

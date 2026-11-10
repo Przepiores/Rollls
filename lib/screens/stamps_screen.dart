@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../backend/backend.dart';
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../widgets/stamp_card.dart';
 import '../widgets/wings.dart';
+import 'login_screen.dart';
 
 class StampsScreen extends ConsumerWidget {
   const StampsScreen({super.key});
@@ -78,8 +80,13 @@ class _Card extends ConsumerWidget {
               border: Border.all(color: card.rewardReady ? RollColors.lime : RollColors.purple, width: 3),
               boxShadow: neonGlow(card.rewardReady ? RollColors.lime : neonPink),
             ),
-            // W wersji z Firebase kod zawiera krótkotrwały token, a nie samo id klienta.
-            child: QrImageView(data: 'icerolls:demo-customer', size: 190, backgroundColor: Colors.white),
+            // Sam identyfikator konta: obsługa i tak musi być zalogowana,
+            // a odbiór nagrody sprawdza serwer.
+            child: QrImageView(
+              data: ref.watch(backendProvider).customerCode(ref.watch(sessionProvider)!.uid),
+              size: 190,
+              backgroundColor: Colors.white,
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -104,7 +111,19 @@ class _SignIn extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final signIn = ref.read(sessionProvider.notifier).signInDemo;
+    final backend = ref.read(backendProvider);
+    Future<void> google() async {
+      try {
+        await backend.signInWithGoogle();
+      } on AuthException catch (e) {
+        if (e.error == AuthError.cancelled || !context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorText(l, e))));
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorText(l, e))));
+      }
+    }
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -118,16 +137,25 @@ class _SignIn extends ConsumerWidget {
         Text(l.loginForStampsBody, style: text.bodyLarge, textAlign: TextAlign.center),
         const SizedBox(height: 24),
         FilledButton.icon(
-          onPressed: signIn,
+          onPressed: google,
           icon: const Icon(Icons.g_mobiledata, size: 28),
           label: Text(l.loginGoogle),
         ),
+        // Logowanie przez Apple wymaga płatnego konta Apple Developer, więc na razie tylko w prototypie.
+        if (!backend.isRemote) ...[
+          const SizedBox(height: 10),
+          FilledButton.icon(onPressed: google, icon: const Icon(Icons.apple), label: Text(l.loginApple)),
+        ],
         const SizedBox(height: 10),
-        FilledButton.icon(onPressed: signIn, icon: const Icon(Icons.apple), label: Text(l.loginApple)),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(onPressed: signIn, icon: const Icon(Icons.mail_outline), label: Text(l.loginEmail)),
-        const SizedBox(height: 14),
-        Text(l.demoLoginNote, textAlign: TextAlign.center, style: text.bodySmall),
+        OutlinedButton.icon(
+          onPressed: () => context.push('/login'),
+          icon: const Icon(Icons.mail_outline),
+          label: Text(l.loginEmail),
+        ),
+        if (!backend.isRemote) ...[
+          const SizedBox(height: 14),
+          Text(l.demoLoginNote, textAlign: TextAlign.center, style: text.bodySmall),
+        ],
       ],
     );
   }

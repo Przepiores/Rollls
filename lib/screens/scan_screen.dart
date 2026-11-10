@@ -37,11 +37,18 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     if (_busy || session == null) return;
     setState(() => _busy = _checking = true);
     final card = ref.read(stampCardProvider);
-    final result = await ref
-        .read(stampCodeServiceProvider)
-        .claim(raw, userId: session.name, stampsMissing: card.remaining);
-    if (result.status == ClaimStatus.added) {
-      ref.read(stampCardProvider.notifier).add(result.stamps);
+    final backend = ref.read(backendProvider);
+    ClaimResult result;
+    try {
+      result = await ref.read(stampCodeServiceProvider).claim(raw, userId: session.uid, stampsMissing: card.remaining);
+    } catch (e) {
+      // Brak sieci albo błąd serwera: kod nie został zużyty, można spróbować ponownie.
+      result = const ClaimResult(ClaimStatus.invalid);
+      debugPrint('claimStampCode: $e');
+    }
+    // Z Firebase pieczątki dopisuje serwer, a karta odświeża się sama z bazy.
+    if (result.status == ClaimStatus.added && !backend.isRemote) {
+      await backend.addStamps(session.uid, result.stamps);
     }
     ref.invalidate(scansLeftTodayProvider);
     if (!mounted) return;
@@ -139,12 +146,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           Text(l.scanHint, textAlign: TextAlign.center, style: text.titleMedium),
           const SizedBox(height: 6),
           if (scansLeft != null) Text(l.scansLeftToday(scansLeft), textAlign: TextAlign.center, style: text.bodyMedium),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: _busy ? null : _demoScan,
-            icon: const Icon(Icons.science_outlined),
-            label: Text(l.scanDemo),
-          ),
+          if (!ref.watch(backendProvider).isRemote) ...[
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _demoScan,
+              icon: const Icon(Icons.science_outlined),
+              label: Text(l.scanDemo),
+            ),
+          ],
         ],
       ),
     );

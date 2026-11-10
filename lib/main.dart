@@ -1,8 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app.dart';
+import 'backend/firebase_backend.dart';
+import 'backend/firebase_config.dart';
+import 'state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,5 +15,22 @@ Future<void> main() async {
   GoogleFonts.fredoka(fontWeight: FontWeight.w600);
   GoogleFonts.nunito(fontWeight: FontWeight.w700);
   await GoogleFonts.pendingFonts().catchError((_) => const <void>[]);
-  runApp(const ProviderScope(child: IceRollsApp()));
+
+  final overrides = [if (await _initFirebase()) backendProvider.overrideWithValue(FirebaseBackend())];
+  runApp(ProviderScope(overrides: overrides, child: const IceRollsApp()));
+}
+
+/// Łączy z Firebase, jeśli aplikacja ma konfigurację. Bez niej albo po błędzie
+/// aplikacja działa dalej na danych wbudowanych (tryb prototypu).
+Future<bool> _initFirebase() async {
+  if (!FirebaseConfig.isConfigured) return false;
+  try {
+    await Firebase.initializeApp(options: FirebaseConfig.currentOptions);
+    // Menu i karta pieczątek działają też bez sieci, z pamięci podręcznej.
+    FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+    return true;
+  } catch (e) {
+    debugPrint('Firebase: $e');
+    return false;
+  }
 }
