@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/admin/admin_screen.dart';
 import 'screens/admin/customer_screen.dart';
+import 'screens/admin/menu_admin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/menu_screen.dart';
@@ -47,6 +48,10 @@ GoRouter _buildRouter() => GoRouter(
         GoRoute(
           path: 'customer',
           builder: (_, _) => const StaffOnly(child: CustomerScreen()),
+        ),
+        GoRoute(
+          path: 'menu',
+          builder: (_, _) => const StaffOnly(child: MenuAdminScreen()),
         ),
       ],
     ),

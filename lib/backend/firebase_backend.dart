@@ -291,4 +291,50 @@ class FirebaseBackend implements Backend {
     });
     return count;
   }
+
+  @override
+  Stream<List<AdminMenuItem>> adminMenuItems() => _sorted('menuItems').map(
+    (docs) => [
+      for (final d in docs)
+        AdminMenuItem(
+          item: Codec.anyMenuItemFrom(d.id, d.data()),
+          active: Codec.isActive(d.data()),
+          sortOrder: Codec.sortOrderOf(d.data()),
+        ),
+    ],
+  );
+
+  @override
+  String newMenuItemId() => _db.collection('menuItems').doc().id;
+
+  /// Zapis do bazy razem z wpisem w historii zmian.
+  Future<void> _withAudit(String action, String path, void Function(WriteBatch batch) write) async {
+    final batch = _db.batch();
+    write(batch);
+    batch.set(_db.collection('auditLog').doc(), {
+      'uid': _auth.currentUser?.uid,
+      'action': action,
+      'path': path,
+      'at': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  @override
+  Future<void> saveMenuItem(MenuItem item, {required bool active, required int sortOrder}) => _withAudit(
+    'saveMenuItem',
+    'menuItems/${item.id}',
+    (b) => b.set(_db.doc('menuItems/${item.id}'), Codec.menuItem(item, sortOrder, active: active)),
+  );
+
+  @override
+  Future<void> setMenuItemActive(String id, bool active) => _withAudit(
+    active ? 'showMenuItem' : 'hideMenuItem',
+    'menuItems/$id',
+    (b) => b.update(_db.doc('menuItems/$id'), {'active': active}),
+  );
+
+  @override
+  Future<void> deleteMenuItem(String id) =>
+      _withAudit('deleteMenuItem', 'menuItems/$id', (b) => b.delete(_db.doc('menuItems/$id')));
 }

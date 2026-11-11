@@ -38,6 +38,14 @@ class Customer {
   final StampCard card;
 }
 
+/// Pozycja menu widziana w panelu: także wyłączona, z miejscem na liście.
+class AdminMenuItem {
+  const AdminMenuItem({required this.item, required this.active, required this.sortOrder});
+  final MenuItem item;
+  final bool active;
+  final int sortOrder;
+}
+
 /// Błąd logowania pokazywany klientowi.
 
 enum AuthError { invalidCredentials, emailInUse, weakPassword, invalidEmail, cancelled, network, unknown }
@@ -93,6 +101,20 @@ abstract interface class Backend {
   /// Dla właściciela: wgrywa menu, promocje i dane lokalu z aplikacji do bazy.
   /// Nadpisuje dokumenty o tych samych id, innych nie rusza.
   Future<int> uploadBundledData();
+
+  /// Dla panelu: wszystkie pozycje menu, także wyłączone, w kolejności z bazy.
+  Stream<List<AdminMenuItem>> adminMenuItems();
+
+  /// Nowy identyfikator dla dodawanej pozycji.
+  String newMenuItemId();
+
+  /// Zapisuje pozycję (nową albo zmienioną). Zdjęcie zostaje takie, jak w [item].
+  Future<void> saveMenuItem(MenuItem item, {required bool active, required int sortOrder});
+
+  /// Włącza albo ukrywa pozycję w menu klientów.
+  Future<void> setMenuItemActive(String id, bool active);
+
+  Future<void> deleteMenuItem(String id);
 }
 
 /// Prototyp bez serwera: dane z plików w `lib/data`, konto demo w pamięci.
@@ -106,6 +128,10 @@ class LocalBackend implements Backend {
 
   final _session = _Value<Session?>(null);
   final _card = _Value(const StampCard(stamps: 7, rewardsRedeemed: 1));
+  final _menu = _Value([
+    for (final (i, item) in bundled.menuItems.indexed) AdminMenuItem(item: item, active: true, sortOrder: i * 10),
+  ]);
+  var _nextId = 0;
 
   @override
   bool get isRemote => false;
@@ -113,7 +139,12 @@ class LocalBackend implements Backend {
   @override
   Stream<List<MenuCategory>> categories() => Stream.value(bundled.categories);
   @override
-  Stream<List<MenuItem>> menuItems() => Stream.value(bundled.menuItems);
+  Stream<List<MenuItem>> menuItems() => _menu.stream.map(
+    (items) => [
+      for (final i in items)
+        if (i.active) i.item,
+    ],
+  );
   @override
   Stream<List<Promotion>> promotions() => Stream.value(bundled.promotions);
   @override
@@ -162,6 +193,35 @@ class LocalBackend implements Backend {
 
   @override
   Future<int> uploadBundledData() async => 0;
+
+  @override
+  Stream<List<AdminMenuItem>> adminMenuItems() => _menu.stream;
+
+  @override
+  String newMenuItemId() => 'nowa-${++_nextId}';
+
+  @override
+  Future<void> saveMenuItem(MenuItem item, {required bool active, required int sortOrder}) async {
+    final entry = AdminMenuItem(item: item, active: active, sortOrder: sortOrder);
+    final list = [
+      for (final i in _menu.value)
+        if (i.item.id != item.id) i,
+      entry,
+    ];
+    _menu.value = list..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  @override
+  Future<void> setMenuItemActive(String id, bool active) async => _menu.value = [
+    for (final i in _menu.value)
+      i.item.id == id ? AdminMenuItem(item: i.item, active: active, sortOrder: i.sortOrder) : i,
+  ];
+
+  @override
+  Future<void> deleteMenuItem(String id) async => _menu.value = [
+    for (final i in _menu.value)
+      if (i.item.id != id) i,
+  ];
 }
 
 /// Wartość, której strumień od razu oddaje bieżący stan, a potem każdą zmianę.

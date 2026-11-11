@@ -68,7 +68,7 @@ abstract final class Codec {
 
   // Pozycje menu
 
-  static Map<String, dynamic> menuItem(MenuItem i, int sortOrder) => {
+  static Map<String, dynamic> menuItem(MenuItem i, int sortOrder, {bool active = true}) => {
     'categoryId': i.categoryId,
     'name': text(i.name),
     'description': i.description == null ? null : text(i.description!),
@@ -79,11 +79,17 @@ abstract final class Codec {
     'badges': [for (final b in i.badges) b.name],
     'image': i.image,
     'sortOrder': sortOrder,
-    'active': true,
+    'active': active,
   };
 
-  static MenuItem? menuItemFrom(String id, Map<String, dynamic> d) {
-    if (!_active(d)) return null;
+  /// Pozycja dla klienta: null, gdy jest wyłączona.
+  static MenuItem? menuItemFrom(String id, Map<String, dynamic> d) => _active(d) ? anyMenuItemFrom(id, d) : null;
+
+  /// Pozycja bez względu na to, czy jest włączona (dla panelu).
+  static bool isActive(Map<String, dynamic> d) => _active(d);
+  static int sortOrderOf(Map<String, dynamic> d) => _int(d['sortOrder'], 1 << 30);
+
+  static MenuItem anyMenuItemFrom(String id, Map<String, dynamic> d) {
     final prices = [
       for (final p in (d['prices'] as List? ?? const []))
         if (p is Map) Price(_int(p['grosze']), textOrNull(p['label'])),
