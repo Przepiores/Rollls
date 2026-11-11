@@ -337,4 +337,55 @@ class FirebaseBackend implements Backend {
   @override
   Future<void> deleteMenuItem(String id) =>
       _withAudit('deleteMenuItem', 'menuItems/$id', (b) => b.delete(_db.doc('menuItems/$id')));
+
+  @override
+  Future<void> saveCategoryNote(String categoryId, LocalizedText? note) => _withAudit(
+    'saveCategoryNote',
+    'categories/$categoryId',
+    (b) => b.update(_db.doc('categories/$categoryId'), {'note': note == null ? null : Codec.text(note)}),
+  );
+
+  @override
+  Stream<List<AdminPromotion>> adminPromotions() => _sorted('promotions').map((docs) {
+    DateTime? time(Object? raw) => raw is Timestamp ? raw.toDate() : null;
+    return [
+      for (final d in docs)
+        AdminPromotion(
+          promotion: Codec.anyPromotionFrom(d.id, d.data()),
+          active: Codec.isActive(d.data()),
+          sortOrder: Codec.sortOrderOf(d.data()),
+          startsAt: time(d.data()['startsAt']),
+          endsAt: time(d.data()['endsAt']),
+        ),
+    ];
+  });
+
+  @override
+  String newPromotionId() => _db.collection('promotions').doc().id;
+
+  @override
+  Future<void> savePromotion(AdminPromotion p) => _withAudit(
+    'savePromotion',
+    'promotions/${p.promotion.id}',
+    (b) => b.set(
+      _db.doc('promotions/${p.promotion.id}'),
+      Codec.promotion(p.promotion, p.sortOrder, active: p.active, startsAt: p.startsAt, endsAt: p.endsAt),
+    ),
+  );
+
+  @override
+  Future<void> deletePromotion(String id) =>
+      _withAudit('deletePromotion', 'promotions/$id', (b) => b.delete(_db.doc('promotions/$id')));
+
+  /// `mergeFields` podmienia całe pola godzin (także usunięte dni specjalne),
+  /// a adresu i linków nie rusza.
+  @override
+  Future<void> saveHours(List<DayHours?> hours, List<SpecialDay> specialDays) => _withAudit(
+    'saveHours',
+    'shop/settings',
+    (b) => b.set(_db.doc('shop/settings'), {
+      'hours': Codec.weekHours(hours),
+      'specialHours': Codec.specialHours(specialDays),
+    }, SetOptions(mergeFields: ['hours', 'specialHours'])),
+  );
 }

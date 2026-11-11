@@ -25,7 +25,9 @@ class MoreScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final text = Theme.of(context).textTheme;
     final days = l.days.split(',');
-    final today = DateTime.now().weekday - 1;
+    final now = DateTime.now();
+    final today = now.weekday - 1;
+    final special = upcomingSpecialDays(shop.specialDays, now, days: 21);
 
     return Scaffold(
       body: ListView(
@@ -80,6 +82,26 @@ class MoreScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                    if (special.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Text(l.hoursChanges, style: text.titleMedium),
+                      const SizedBox(height: 6),
+                      for (final s in special)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+                          child: Row(
+                            children: [
+                              Expanded(child: Text('${shortDate(s.date)} · ${days[s.date.weekday - 1]}')),
+                              Text(
+                                s.hours == null
+                                    ? l.hoursClosed
+                                    : '${formatTime(s.hours!.open)} – ${formatTime(s.hours!.close)}',
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                     const SizedBox(height: 18),
                     Text(l.followUs, style: text.titleMedium),
                     Wrap(

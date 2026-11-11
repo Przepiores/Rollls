@@ -62,13 +62,16 @@ void main() {
     final firstName = bundled.menuItems.first.name.pl;
     expect(find.text('Ukryte (1)'), findsNothing);
 
+    // Nad listą jest ramka z cenami, więc pierwsza pozycja bywa poniżej ekranu.
+    await tester.scrollUntilVisible(find.text(firstName), 300, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(Switch).first);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Ukryte (1)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Ukryte (1)'), findsOneWidget);
     expect(await visibleNames(tester, c), isNot(contains(first)));
 
-    await tester.scrollUntilVisible(find.text(firstName).last, 300, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(find.text(firstName), 300, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
@@ -117,8 +120,7 @@ void main() {
   testWidgets('zmiana ceny i usunięcie pozycji', (tester) async {
     final c = await open(tester);
     final first = bundled.menuItems.first;
-    await tester.tap(find.text(first.name.pl));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text(first.name.pl));
 
     await tester.scrollUntilVisible(
       find.widgetWithText(TextFormField, 'Cena (zł)').first,
@@ -133,8 +135,7 @@ void main() {
     // Komunikat „Zapisano” zasłania dół ekranu, czekamy aż zniknie.
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(first.name.pl));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text(first.name.pl));
     await tapVisible(tester, find.text('Usuń pozycję'));
     await tester.tap(find.widgetWithText(FilledButton, 'Usuń pozycję'));
     await tester.pumpAndSettle();

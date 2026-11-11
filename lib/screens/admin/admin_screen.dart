@@ -22,11 +22,7 @@ class AdminScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final isOwner = session?.isOwner ?? false;
 
-    final later = [
-      (Icons.local_offer_outlined, l.panelPromos),
-      (Icons.schedule, l.panelHours),
-      (Icons.bar_chart, l.panelStats),
-    ];
+    final later = [(Icons.bar_chart, l.panelStats)];
 
     return StaffOnly(
       child: Scaffold(
@@ -48,6 +44,22 @@ class AdminScreen extends ConsumerWidget {
                 title: l.panelMenu,
                 subtitle: l.adminMenuHint,
                 onTap: () => context.push('/admin/menu'),
+              ),
+            if (isOwner)
+              AdminActionTile(
+                icon: Icons.local_offer_outlined,
+                color: RollColors.pink,
+                title: l.panelPromos,
+                subtitle: l.adminPromosHint,
+                onTap: () => context.push('/admin/promotions'),
+              ),
+            if (isOwner)
+              AdminActionTile(
+                icon: Icons.schedule,
+                color: RollColors.purple,
+                title: l.panelHours,
+                subtitle: l.adminHoursHint,
+                onTap: () => context.push('/admin/hours'),
               ),
             if (backend.isRemote && isOwner) ...[const SizedBox(height: 20), const _UploadBundledData()],
             const SizedBox(height: 28),

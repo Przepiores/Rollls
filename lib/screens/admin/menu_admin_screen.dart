@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../../state.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/category_note.dart';
+import 'category_note_edit_screen.dart';
 import 'menu_item_edit_screen.dart';
 
 /// Panel: lista pozycji menu w wybranej kategorii, przełącznik widoczności
@@ -101,8 +103,22 @@ class _MenuAdminScreenState extends ConsumerState<MenuAdminScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (category != null) Text(category.name.pl, style: text.titleLarge),
-                      const SizedBox(height: 8),
+                      if (category != null) ...[
+                        Text(category.name.pl, style: text.titleLarge),
+                        const SizedBox(height: 8),
+                        if (category.note != null) CategoryNote(text: category.note!.pl, color: category.color),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).push(MaterialPageRoute<void>(builder: (_) => CategoryNoteEditScreen(category: category))),
+                            icon: const Icon(Icons.edit_note),
+                            label: Text(l.noteEditButton),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       for (final e in visible)
                         _ItemTile(
                           entry: e,
