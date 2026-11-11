@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models.dart';
 import '../state.dart';
 import '../theme.dart';
+import '../widgets/category_note.dart';
 import '../widgets/common.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
@@ -60,7 +61,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
                 if (cat.image != null) _CategoryBanner(category: cat, locale: locale),
-                if (cat.note != null) _CategoryNote(text: cat.note!.of(locale), color: cat.color),
+                if (cat.note != null) CategoryNote(text: cat.note!.of(locale), color: cat.color),
                 for (final entry in _grouped(items))
                   if (entry.$1 == null)
                     for (final item in entry.$2)
@@ -141,33 +142,6 @@ class _CategoryBanner extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryNote extends StatelessWidget {
-  const _CategoryNote({required this.text, required this.color});
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: tint(context, color, light: 0.35, dark: 0.25),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color, width: 2),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline_rounded),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
         ],
       ),
     );
