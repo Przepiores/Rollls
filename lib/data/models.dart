@@ -84,6 +84,9 @@ class MenuItem {
 
 class Promotion {
   const Promotion({required this.id, required this.title, required this.body, required this.color, this.image});
+
+  Promotion copyWith({String? id}) =>
+      Promotion(id: id ?? this.id, title: title, body: body, color: color, image: image);
   final String id;
   final LocalizedText title;
   final LocalizedText body;
@@ -100,6 +103,7 @@ class Shop {
     required this.instagram,
     required this.facebook,
     required this.hours,
+    this.specialDays = const [],
   });
   final String name;
   final String street;
@@ -110,6 +114,32 @@ class Shop {
 
   /// Godziny otwarcia, indeks 0 = poniedziałek.
   final List<DayHours?> hours;
+
+  /// Dni z innymi godzinami niż zwykle (święta, remont), posortowane po dacie.
+  final List<SpecialDay> specialDays;
+
+  Shop copyWith({List<DayHours?>? hours, List<SpecialDay>? specialDays}) => Shop(
+    name: name,
+    street: street,
+    city: city,
+    mapsQuery: mapsQuery,
+    instagram: instagram,
+    facebook: facebook,
+    hours: hours ?? this.hours,
+    specialDays: specialDays ?? this.specialDays,
+  );
+}
+
+/// Jeden dzień z innymi godzinami. [hours] == null znaczy, że lokal jest zamknięty.
+class SpecialDay {
+  SpecialDay(DateTime date, [this.hours]) : date = DateTime(date.year, date.month, date.day);
+  final DateTime date;
+  final DayHours? hours;
+
+  /// Klucz w bazie, np. „2026-12-24”.
+  String get key => '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  bool isOn(DateTime day) => day.year == date.year && day.month == date.month && day.day == date.day;
 }
 
 class DayHours {

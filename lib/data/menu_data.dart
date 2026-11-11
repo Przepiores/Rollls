@@ -17,12 +17,14 @@ const categories = [
     note: L(
       '1\u00a0składnik\u00a020\u00a0zł, 2\u00a0składniki\u00a023\u00a0zł, 3\u00a0składniki\u00a025\u00a0zł\n'
           'Studenci: 2\u00a0składniki\u00a021\u00a0zł, 3\u00a0składniki\u00a023\u00a0zł\n'
+          'Dodatki po 4\u00a0zł: bita śmietana, polewa, posypka\n'
           'Składniki można łączyć dowolnie, poniżej polecane smaki. Lody są na bazie śmietany, '
-          'jest też opcja vege. Dodatki po 4 zł: bita śmietana, polewa, posypka.',
+          'jest też opcja vege.',
       '1\u00a0ingredient\u00a020\u00a0zł, 2\u00a0ingredients\u00a023\u00a0zł, 3\u00a0ingredients\u00a025\u00a0zł\n'
           'Students: 2\u00a0ingredients\u00a021\u00a0zł, 3\u00a0ingredients\u00a023\u00a0zł\n'
+          'Extras 4\u00a0zł each: whipped cream, sauce, sprinkles\n'
           'Mix any ingredients you like, below are our favourite combos. Made with cream, '
-          'vegan option available. Extras 4 zł each: whipped cream, sauce, sprinkles.',
+          'vegan option available.',
     ),
   ),
   MenuCategory(

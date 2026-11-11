@@ -34,18 +34,21 @@ class HomeScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 24),
       children: [
         _GlassHero(greeting: l.greeting(session != null ? ', ${session.name}' : ''), tagline: l.tagline),
-        SectionTitle(l.promotions, color: RollColors.lime),
-        SizedBox(
-          height: 300,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            // Miejsce na neonową poświatę wokół kart.
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            itemCount: promotions.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, i) => _PromoCard(promo: promotions[i], locale: locale),
+        // Gdy szefowa wyłączy wszystkie promocje, sekcja znika zamiast świecić pustką.
+        if (promotions.isNotEmpty) ...[
+          SectionTitle(l.promotions, color: RollColors.lime),
+          SizedBox(
+            height: 300,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              // Miejsce na neonową poświatę wokół kart.
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              itemCount: promotions.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, i) => PromoCard(promo: promotions[i], locale: locale),
+            ),
           ),
-        ),
+        ],
         SectionTitle(
           l.yourCard,
           color: RollColors.yellow,
@@ -229,14 +232,16 @@ class OpenStatusPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final status = openStatus(ref.watch(shopProvider).hours, DateTime.now());
+    final shop = ref.watch(shopProvider);
+    final status = openStatus(shop.hours, DateTime.now(), special: shop.specialDays);
     final (label, color) = switch (status) {
       OpenNow(:final closesAt) => (l.openUntil(formatTime(closesAt)), RollColors.lime),
       ClosedNow(:final opensAt, :final daysAhead) => (
         l.closedOpensAt(switch (daysAhead) {
           0 => l.today,
           1 => l.tomorrow,
-          _ => l.days.split(',')[(DateTime.now().weekday - 1 + daysAhead) % 7],
+          < 7 => l.days.split(',')[(DateTime.now().weekday - 1 + daysAhead) % 7],
+          _ => shortDate(DateTime.now().add(Duration(days: daysAhead))),
         }, formatTime(opensAt)),
         RollColors.red,
       ),
@@ -268,8 +273,8 @@ class OpenStatusPill extends ConsumerWidget {
   }
 }
 
-class _PromoCard extends StatelessWidget {
-  const _PromoCard({required this.promo, required this.locale});
+class PromoCard extends StatelessWidget {
+  const PromoCard({super.key, required this.promo, required this.locale});
   final Promotion promo;
   final Locale locale;
 

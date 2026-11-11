@@ -15,7 +15,8 @@ import '../data/models.dart';
 /// * `promotions/{id}`: title, body, color, image?, sortOrder, active,
 ///   startsAt?, endsAt?
 /// * `shop/settings`: name, street, city, mapsQuery, instagram, facebook,
-///   hours [7 x {open: "11:00", close: "21:30"} albo null], specialHours
+///   hours [7 x {open: "11:00", close: "21:30"} albo null],
+///   specialHours {"2026-12-24": {open, close} albo null = zamknięte}
 /// * `users/{uid}`: displayName, email, marketingConsent, createdAt,
 ///   stamps, rewardsRedeemed (pieczątki zmienia tylko admin, patrz firestore.rules)
 ///
@@ -68,7 +69,7 @@ abstract final class Codec {
 
   // Pozycje menu
 
-  static Map<String, dynamic> menuItem(MenuItem i, int sortOrder) => {
+  static Map<String, dynamic> menuItem(MenuItem i, int sortOrder, {bool active = true}) => {
     'categoryId': i.categoryId,
     'name': text(i.name),
     'description': i.description == null ? null : text(i.description!),
@@ -79,11 +80,17 @@ abstract final class Codec {
     'badges': [for (final b in i.badges) b.name],
     'image': i.image,
     'sortOrder': sortOrder,
-    'active': true,
+    'active': active,
   };
 
-  static MenuItem? menuItemFrom(String id, Map<String, dynamic> d) {
-    if (!_active(d)) return null;
+  /// Pozycja dla klienta: null, gdy jest wyłączona.
+  static MenuItem? menuItemFrom(String id, Map<String, dynamic> d) => _active(d) ? anyMenuItemFrom(id, d) : null;
+
+  /// Pozycja bez względu na to, czy jest włączona (dla panelu).
+  static bool isActive(Map<String, dynamic> d) => _active(d);
+  static int sortOrderOf(Map<String, dynamic> d) => _int(d['sortOrder'], 1 << 30);
+
+  static MenuItem anyMenuItemFrom(String id, Map<String, dynamic> d) {
     final prices = [
       for (final p in (d['prices'] as List? ?? const []))
         if (p is Map) Price(_int(p['grosze']), textOrNull(p['label'])),
@@ -106,16 +113,32 @@ abstract final class Codec {
 
   // Promocje
 
-  static Map<String, dynamic> promotion(Promotion p, int sortOrder) => {
+  /// [startsAt] i [endsAt] Firestore zapisuje jako Timestamp.
+  static Map<String, dynamic> promotion(
+    Promotion p,
+    int sortOrder, {
+    bool active = true,
+    DateTime? startsAt,
+    DateTime? endsAt,
+  }) => {
     'title': text(p.title),
     'body': text(p.body),
     'color': p.color.toARGB32(),
     'image': p.image,
     'sortOrder': sortOrder,
-    'active': true,
-    'startsAt': null,
-    'endsAt': null,
+    'active': active,
+    'startsAt': startsAt,
+    'endsAt': endsAt,
   };
+
+  /// Promocja bez względu na termin i włącznik (dla panelu).
+  static Promotion anyPromotionFrom(String id, Map<String, dynamic> d) => Promotion(
+    id: id,
+    title: textOf(d['title']),
+    body: textOf(d['body']),
+    color: Color(_int(d['color'], 0xFFC6F432)),
+    image: _str(d['image']),
+  );
 
   /// Zwraca null dla wyłączonej promocji albo poza jej terminem.
   /// [startsAt] i [endsAt] to czasy już zamienione z Timestamp.
@@ -129,13 +152,7 @@ abstract final class Codec {
     if (!_active(d)) return null;
     if (startsAt != null && now.isBefore(startsAt)) return null;
     if (endsAt != null && !now.isBefore(endsAt)) return null;
-    return Promotion(
-      id: id,
-      title: textOf(d['title']),
-      body: textOf(d['body']),
-      color: Color(_int(d['color'], 0xFFC6F432)),
-      image: _str(d['image']),
-    );
+    return anyPromotionFrom(id, d);
   }
 
   // Lokal
@@ -161,21 +178,39 @@ abstract final class Codec {
     'hours': [
       for (final h in s.hours) h == null ? null : {'open': _time(h.open), 'close': _time(h.close)},
     ],
-    'specialHours': <String, dynamic>{},
+    'specialHours': specialHours(s.specialDays),
   };
+
+  static Map<String, dynamic>? _dayHours(DayHours? h) =>
+      h == null ? null : {'open': _time(h.open), 'close': _time(h.close)};
+
+  static DayHours? _dayHoursFrom(Object? h) {
+    if (h is! Map) return null;
+    final open = _timeFrom(h['open']), close = _timeFrom(h['close']);
+    return open == null || close == null ? null : DayHours(open, close);
+  }
+
+  static List<Map<String, dynamic>?> weekHours(List<DayHours?> hours) => [for (final h in hours) _dayHours(h)];
+
+  /// Dni specjalne: {"2026-12-24": {open, close}} albo null, gdy zamknięte.
+  static Map<String, dynamic> specialHours(List<SpecialDay> days) => {for (final d in days) d.key: _dayHours(d.hours)};
+
+  static List<SpecialDay> specialDaysFrom(Object? raw) {
+    if (raw is! Map) return const [];
+    final out = <SpecialDay>[];
+    for (final MapEntry(:key, :value) in raw.entries) {
+      final date = key is String ? DateTime.tryParse(key) : null;
+      if (date != null) out.add(SpecialDay(date, _dayHoursFrom(value)));
+    }
+    return out..sort((a, b) => a.date.compareTo(b.date));
+  }
 
   /// Brakujące pola biorą się z [fallback], żeby niepełny dokument nie psuł ekranu.
   static Shop shopFrom(Map<String, dynamic> d, Shop fallback) {
     final rawHours = d['hours'];
     List<DayHours?> hours = fallback.hours;
     if (rawHours is List && rawHours.length == 7) {
-      hours = [
-        for (final h in rawHours)
-          if (h is Map && _timeFrom(h['open']) != null && _timeFrom(h['close']) != null)
-            DayHours(_timeFrom(h['open'])!, _timeFrom(h['close'])!)
-          else
-            null,
-      ];
+      hours = [for (final h in rawHours) _dayHoursFrom(h)];
     }
     return Shop(
       name: _str(d['name']) ?? fallback.name,
@@ -185,6 +220,7 @@ abstract final class Codec {
       instagram: _str(d['instagram']) ?? fallback.instagram,
       facebook: _str(d['facebook']) ?? fallback.facebook,
       hours: hours,
+      specialDays: specialDaysFrom(d['specialHours']),
     );
   }
 

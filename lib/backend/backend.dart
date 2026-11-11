@@ -38,6 +38,38 @@ class Customer {
   final StampCard card;
 }
 
+/// Pozycja menu widziana w panelu: także wyłączona, z miejscem na liście.
+class AdminMenuItem {
+  const AdminMenuItem({required this.item, required this.active, required this.sortOrder});
+  final MenuItem item;
+  final bool active;
+  final int sortOrder;
+}
+
+/// Promocja widziana w panelu: także wyłączona albo poza terminem.
+class AdminPromotion {
+  const AdminPromotion({
+    required this.promotion,
+    required this.active,
+    required this.sortOrder,
+    this.startsAt,
+    this.endsAt,
+  });
+  final Promotion promotion;
+  final bool active;
+  final int sortOrder;
+
+  /// Od kiedy klienci ją widzą (null = od razu).
+  final DateTime? startsAt;
+
+  /// Od kiedy już jej nie widzą (null = bez końca).
+  final DateTime? endsAt;
+
+  /// Czy klient widzi ją w chwili [now].
+  bool visibleAt(DateTime now) =>
+      active && (startsAt == null || !now.isBefore(startsAt!)) && (endsAt == null || now.isBefore(endsAt!));
+}
+
 /// Błąd logowania pokazywany klientowi.
 
 enum AuthError { invalidCredentials, emailInUse, weakPassword, invalidEmail, cancelled, network, unknown }
@@ -93,6 +125,32 @@ abstract interface class Backend {
   /// Dla właściciela: wgrywa menu, promocje i dane lokalu z aplikacji do bazy.
   /// Nadpisuje dokumenty o tych samych id, innych nie rusza.
   Future<int> uploadBundledData();
+
+  /// Dla panelu: wszystkie pozycje menu, także wyłączone, w kolejności z bazy.
+  Stream<List<AdminMenuItem>> adminMenuItems();
+
+  /// Nowy identyfikator dla dodawanej pozycji.
+  String newMenuItemId();
+
+  /// Zapisuje pozycję (nową albo zmienioną). Zdjęcie zostaje takie, jak w [item].
+  Future<void> saveMenuItem(MenuItem item, {required bool active, required int sortOrder});
+
+  /// Włącza albo ukrywa pozycję w menu klientów.
+  Future<void> setMenuItemActive(String id, bool active);
+
+  Future<void> deleteMenuItem(String id);
+
+  /// Zmienia ramkę z informacją nad listą kategorii. Null usuwa ramkę.
+  Future<void> saveCategoryNote(String categoryId, LocalizedText? note);
+
+  /// Dla panelu: wszystkie promocje, także wyłączone i poza terminem.
+  Stream<List<AdminPromotion>> adminPromotions();
+  String newPromotionId();
+  Future<void> savePromotion(AdminPromotion promotion);
+  Future<void> deletePromotion(String id);
+
+  /// Zapisuje godziny tygodnia i dni specjalne. Reszta danych lokalu bez zmian.
+  Future<void> saveHours(List<DayHours?> hours, List<SpecialDay> specialDays);
 }
 
 /// Prototyp bez serwera: dane z plików w `lib/data`, konto demo w pamięci.
@@ -105,19 +163,38 @@ class LocalBackend implements Backend {
   final StampCodeService stampCodes;
 
   final _session = _Value<Session?>(null);
+  final _categories = _Value(bundled.categories);
+  final _promos = _Value([
+    for (final (i, p) in bundled.promotions.indexed) AdminPromotion(promotion: p, active: true, sortOrder: i * 10),
+  ]);
+  final _shop = _Value(bundled.shop);
   final _card = _Value(const StampCard(stamps: 7, rewardsRedeemed: 1));
+  final _menu = _Value([
+    for (final (i, item) in bundled.menuItems.indexed) AdminMenuItem(item: item, active: true, sortOrder: i * 10),
+  ]);
+  var _nextId = 0;
 
   @override
   bool get isRemote => false;
 
   @override
-  Stream<List<MenuCategory>> categories() => Stream.value(bundled.categories);
+  Stream<List<MenuCategory>> categories() => _categories.stream;
   @override
-  Stream<List<MenuItem>> menuItems() => Stream.value(bundled.menuItems);
+  Stream<List<MenuItem>> menuItems() => _menu.stream.map(
+    (items) => [
+      for (final i in items)
+        if (i.active) i.item,
+    ],
+  );
   @override
-  Stream<List<Promotion>> promotions() => Stream.value(bundled.promotions);
+  Stream<List<Promotion>> promotions() => _promos.stream.map(
+    (all) => [
+      for (final p in all)
+        if (p.visibleAt(DateTime.now())) p.promotion,
+    ],
+  );
   @override
-  Stream<Shop> shop() => Stream.value(bundled.shop);
+  Stream<Shop> shop() => _shop.stream;
 
   @override
   Stream<Session?> session() => _session.stream;
@@ -162,6 +239,76 @@ class LocalBackend implements Backend {
 
   @override
   Future<int> uploadBundledData() async => 0;
+
+  @override
+  Stream<List<AdminMenuItem>> adminMenuItems() => _menu.stream;
+
+  @override
+  String newMenuItemId() => 'nowa-${++_nextId}';
+
+  @override
+  Future<void> saveMenuItem(MenuItem item, {required bool active, required int sortOrder}) async {
+    final entry = AdminMenuItem(item: item, active: active, sortOrder: sortOrder);
+    final list = [
+      for (final i in _menu.value)
+        if (i.item.id != item.id) i,
+      entry,
+    ];
+    _menu.value = list..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  @override
+  Future<void> setMenuItemActive(String id, bool active) async => _menu.value = [
+    for (final i in _menu.value)
+      i.item.id == id ? AdminMenuItem(item: i.item, active: active, sortOrder: i.sortOrder) : i,
+  ];
+
+  @override
+  Future<void> deleteMenuItem(String id) async => _menu.value = [
+    for (final i in _menu.value)
+      if (i.item.id != id) i,
+  ];
+
+  @override
+  Future<void> saveCategoryNote(String categoryId, LocalizedText? note) async => _categories.value = [
+    for (final c in _categories.value)
+      c.id != categoryId
+          ? c
+          : MenuCategory(
+              id: c.id,
+              name: c.name,
+              color: c.color,
+              note: note,
+              image: c.image,
+              imageAlignment: c.imageAlignment,
+            ),
+  ];
+
+  @override
+  Stream<List<AdminPromotion>> adminPromotions() => _promos.stream;
+
+  @override
+  String newPromotionId() => 'promo-${++_nextId}';
+
+  @override
+  Future<void> savePromotion(AdminPromotion promotion) async {
+    final list = [
+      for (final p in _promos.value)
+        if (p.promotion.id != promotion.promotion.id) p,
+      promotion,
+    ];
+    _promos.value = list..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  @override
+  Future<void> deletePromotion(String id) async => _promos.value = [
+    for (final p in _promos.value)
+      if (p.promotion.id != id) p,
+  ];
+
+  @override
+  Future<void> saveHours(List<DayHours?> hours, List<SpecialDay> specialDays) async =>
+      _shop.value = _shop.value.copyWith(hours: hours, specialDays: specialDays);
 }
 
 /// Wartość, której strumień od razu oddaje bieżący stan, a potem każdą zmianę.

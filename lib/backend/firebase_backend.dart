@@ -291,4 +291,101 @@ class FirebaseBackend implements Backend {
     });
     return count;
   }
+
+  @override
+  Stream<List<AdminMenuItem>> adminMenuItems() => _sorted('menuItems').map(
+    (docs) => [
+      for (final d in docs)
+        AdminMenuItem(
+          item: Codec.anyMenuItemFrom(d.id, d.data()),
+          active: Codec.isActive(d.data()),
+          sortOrder: Codec.sortOrderOf(d.data()),
+        ),
+    ],
+  );
+
+  @override
+  String newMenuItemId() => _db.collection('menuItems').doc().id;
+
+  /// Zapis do bazy razem z wpisem w historii zmian.
+  Future<void> _withAudit(String action, String path, void Function(WriteBatch batch) write) async {
+    final batch = _db.batch();
+    write(batch);
+    batch.set(_db.collection('auditLog').doc(), {
+      'uid': _auth.currentUser?.uid,
+      'action': action,
+      'path': path,
+      'at': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  @override
+  Future<void> saveMenuItem(MenuItem item, {required bool active, required int sortOrder}) => _withAudit(
+    'saveMenuItem',
+    'menuItems/${item.id}',
+    (b) => b.set(_db.doc('menuItems/${item.id}'), Codec.menuItem(item, sortOrder, active: active)),
+  );
+
+  @override
+  Future<void> setMenuItemActive(String id, bool active) => _withAudit(
+    active ? 'showMenuItem' : 'hideMenuItem',
+    'menuItems/$id',
+    (b) => b.update(_db.doc('menuItems/$id'), {'active': active}),
+  );
+
+  @override
+  Future<void> deleteMenuItem(String id) =>
+      _withAudit('deleteMenuItem', 'menuItems/$id', (b) => b.delete(_db.doc('menuItems/$id')));
+
+  @override
+  Future<void> saveCategoryNote(String categoryId, LocalizedText? note) => _withAudit(
+    'saveCategoryNote',
+    'categories/$categoryId',
+    (b) => b.update(_db.doc('categories/$categoryId'), {'note': note == null ? null : Codec.text(note)}),
+  );
+
+  @override
+  Stream<List<AdminPromotion>> adminPromotions() => _sorted('promotions').map((docs) {
+    DateTime? time(Object? raw) => raw is Timestamp ? raw.toDate() : null;
+    return [
+      for (final d in docs)
+        AdminPromotion(
+          promotion: Codec.anyPromotionFrom(d.id, d.data()),
+          active: Codec.isActive(d.data()),
+          sortOrder: Codec.sortOrderOf(d.data()),
+          startsAt: time(d.data()['startsAt']),
+          endsAt: time(d.data()['endsAt']),
+        ),
+    ];
+  });
+
+  @override
+  String newPromotionId() => _db.collection('promotions').doc().id;
+
+  @override
+  Future<void> savePromotion(AdminPromotion p) => _withAudit(
+    'savePromotion',
+    'promotions/${p.promotion.id}',
+    (b) => b.set(
+      _db.doc('promotions/${p.promotion.id}'),
+      Codec.promotion(p.promotion, p.sortOrder, active: p.active, startsAt: p.startsAt, endsAt: p.endsAt),
+    ),
+  );
+
+  @override
+  Future<void> deletePromotion(String id) =>
+      _withAudit('deletePromotion', 'promotions/$id', (b) => b.delete(_db.doc('promotions/$id')));
+
+  /// `mergeFields` podmienia całe pola godzin (także usunięte dni specjalne),
+  /// a adresu i linków nie rusza.
+  @override
+  Future<void> saveHours(List<DayHours?> hours, List<SpecialDay> specialDays) => _withAudit(
+    'saveHours',
+    'shop/settings',
+    (b) => b.set(_db.doc('shop/settings'), {
+      'hours': Codec.weekHours(hours),
+      'specialHours': Codec.specialHours(specialDays),
+    }, SetOptions(mergeFields: ['hours', 'specialHours'])),
+  );
 }
